@@ -1,0 +1,273 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Base Brand Colors - Dark Mode */
+  --base-blue: #3374FF;
+  --base-blue-dark: #0052FF;
+  --base-blue-light: #5590FF;
+  
+  /* Dark Mode Colors */
+  --background: #0A0B0D;
+  --background-secondary: #1A1B1F;
+  --background-tertiary: #2A2B30;
+  --foreground: #FFFFFF;
+  --foreground-secondary: #D1D5DB;
+  --foreground-tertiary: #9CA3AF;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --success-light: #065F46;
+  --warning: #F59E0B;
+  --warning-light: #78350F;
+  --error: #EF4444;
+  --error-light: #7F1D1D;
+  
+  /* Border & Shadow */
+  --border: #2A2B30;
+  --border-strong: #3A3B40;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+  
+  /* Spacing Scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+  
+  /* Typography Scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  
+  /* Animation */
+  --transition-fast: 150ms;
+  --transition-base: 250ms;
+  --transition-slow: 350ms;
+}
+
+/* Dark mode is the only mode */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Mobile-First Typography */
+@media (max-width: 640px) {
+  :root {
+    --text-xs: 0.8125rem;
+    --text-sm: 0.9375rem;
+    --text-base: 1.0625rem;
+    --text-lg: 1.1875rem;
+    --text-xl: 1.375rem;
+    --text-2xl: 1.625rem;
+    --text-3xl: 2rem;
+    --text-4xl: 2.5rem;
+  }
+}
+
+/* Touch Target Optimization */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Custom scrollbar for webkit browsers */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+    border-radius: var(--radius-full);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-full);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--foreground-tertiary);
+  }
+  
+  /* Smooth transitions */
+  .transition-smooth {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: var(--transition-base);
+  }
+  
+  /* Glass morphism effect - Dark mode only */
+  .glass {
+    background: rgba(26, 27, 31, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Focus styles for accessibility - Dark mode */
+  .focus-ring {
+    @apply outline-none ring-2 ring-offset-2 ring-offset-black ring-blue-500 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+  }
+}
+
+/* Loading skeleton animation */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  display: inline-block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--background-secondary) 0px,
+    var(--background-tertiary) 40px,
+    var(--background-secondary) 80px
+  );
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Button base styles */
+.btn-base {
+  @apply touch-target inline-flex items-center justify-center px-4 py-2 font-medium rounded-lg transition-smooth focus-ring;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-primary {
+  @apply btn-base bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+}
+
+.btn-secondary {
+  @apply btn-base bg-gray-800 text-gray-100 hover:bg-gray-700 active:bg-gray-600;
+}
+
+/* Card component - Dark mode */
+.card {
+  @apply bg-gray-900 rounded-xl shadow-sm border border-gray-800 p-6;
+}
+
+/* Responsive container */
+.container-responsive {
+  @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+  max-width: 1280px;
+}
+
+/* Mobile-first grid */
+.grid-responsive {
+  @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+/* OnchainKit TokenSelector Dark Theme Override */
+[data-testid="ockTokenSelectDropdown_Button"],
+.ock-tokenselectdropdown-button,
+button[class*="TokenSelectDropdown"] {
+  background: var(--background-secondary) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+[data-testid="ockTokenSelectDropdown_Button"]:hover,
+.ock-tokenselectdropdown-button:hover,
+button[class*="TokenSelectDropdown"]:hover {
+  background: var(--background-tertiary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+/* Token dropdown menu */
+[data-testid*="TokenSelectModal"],
+.ock-tokenselectmodal,
+div[class*="TokenSelectModal"] {
+  background: var(--background-secondary) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Token list items */
+[data-testid*="TokenRow"],
+.ock-tokenrow,
+div[class*="TokenRow"] {
+  background: var(--background-secondary) !important;
+  color: var(--foreground) !important;
+}
+
+[data-testid*="TokenRow"]:hover,
+.ock-tokenrow:hover,
+div[class*="TokenRow"]:hover {
+  background: var(--background-tertiary) !important;
+}
+
+/* Token search input */
+[data-testid*="TokenSearch"],
+.ock-tokensearch-input,
+input[class*="TokenSearch"] {
+  background: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+[data-testid*="TokenSearch"]::placeholder,
+.ock-tokensearch-input::placeholder,
+input[class*="TokenSearch"]::placeholder {
+  color: var(--foreground-tertiary) !important;
+}
+
+/* Selected token highlight */
+.ock-tokenrow-selected,
+div[class*="TokenRow"][data-selected="true"] {
+  background: var(--base-blue) !important;
+  background: rgba(51, 116, 255, 0.2) !important;
+}

@@ -18,7 +18,13 @@ interface LockConfirmationProps {
   onCancel: () => void;
 }
 
-const VAULT_ADDRESS = process.env.NEXT_PUBLIC_VAULT_ADDRESS as `0x${string}`;
+const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS || '') as `0x${string}`;
+
+// Log the vault address for debugging
+if (typeof window !== 'undefined') {
+  console.log('VAULT_ADDRESS from env:', process.env.NEXT_PUBLIC_VAULT_ADDRESS);
+  console.log('Parsed VAULT_ADDRESS:', VAULT_ADDRESS);
+}
 
 export default function LockConfirmation({
   token,
@@ -36,8 +42,19 @@ export default function LockConfirmation({
   const { error, isRetrying, handleError, clearError } = useErrorHandler();
   const [showSuccessWithShare, setShowSuccessWithShare] = useState(false);
 
-  const { writeContract: approve, data: approveHash } = useWriteContract();
-  const { writeContract: lock, data: lockHash } = useWriteContract();
+  const { 
+    writeContract: approve, 
+    data: approveHash,
+    error: approveError,
+    isError: isApproveError 
+  } = useWriteContract();
+  
+  const { 
+    writeContract: lock, 
+    data: lockHash,
+    error: lockError,
+    isError: isLockError
+  } = useWriteContract();
 
   const { isLoading: isApprovalPending, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
     hash: approveHash,
@@ -49,64 +66,110 @@ export default function LockConfirmation({
 
   const unlockDate = addSeconds(new Date(), Number(duration));
 
-  const handleApprove = async () => {
-    if (!address || !VAULT_ADDRESS) return;
+  const handleApprove = () => {
+    if (!address) {
+      console.error('No wallet address connected');
+      handleError(new Error('Please connect your wallet'), handleApprove);
+      return;
+    }
+    
+    if (!VAULT_ADDRESS || VAULT_ADDRESS === '' || !VAULT_ADDRESS.startsWith('0x')) {
+      console.error('Invalid or missing VAULT_ADDRESS:', VAULT_ADDRESS);
+      handleError(new Error('Vault address not configured. Please check environment variables.'), handleApprove);
+      return;
+    }
     
     setIsApproving(true);
     clearError();
-    try {
-      // Approve token spending
-      await approve({
-        address: token.address as `0x${string}`,
-        abi: [
-          {
-            name: 'approve',
-            type: 'function',
-            stateMutability: 'nonpayable',
-            inputs: [
-              { name: 'spender', type: 'address' },
-              { name: 'amount', type: 'uint256' },
-            ],
-            outputs: [{ name: '', type: 'bool' }],
-          },
-        ],
-        functionName: 'approve',
-        args: [VAULT_ADDRESS, amountWei],
-      });
-    } catch (err) {
-      console.error('Approval failed:', err);
-      handleError(err, handleApprove);
-      setIsApproving(false);
-    }
+    
+    console.log('Initiating approval...', {
+      tokenAddress: token.address,
+      vaultAddress: VAULT_ADDRESS,
+      amount: amountWei.toString()
+    });
+    
+    // Approve token spending
+    approve({
+      address: token.address as `0x${string}`,
+      abi: [
+        {
+          name: 'approve',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' },
+          ],
+          outputs: [{ name: '', type: 'bool' }],
+        },
+      ],
+      functionName: 'approve',
+      args: [VAULT_ADDRESS, amountWei],
+    });
   };
 
-  const handleLock = useCallback(async () => {
-    if (!address || !VAULT_ADDRESS || hasTriggeredLock) return;
+  const handleLock = useCallback(() => {
+    if (!address) {
+      console.error('No wallet address connected');
+      return;
+    }
+    
+    if (!VAULT_ADDRESS || VAULT_ADDRESS === '' || !VAULT_ADDRESS.startsWith('0x')) {
+      console.error('Invalid or missing VAULT_ADDRESS:', VAULT_ADDRESS);
+      return;
+    }
+    
+    if (hasTriggeredLock) {
+      console.error('Lock already triggered');
+      return;
+    }
 
     setIsLocking(true);
     setHasTriggeredLock(true);
     clearError();
-    try {
-      await lock({
-        address: VAULT_ADDRESS,
-        abi: HodlVaultABI.abi,
-        functionName: 'lockTokens',
-        args: [token.address, amountWei, duration],
-      });
-    } catch (err) {
-      console.error('Lock failed:', err);
-      handleError(err, () => {
+    
+    console.log('Initiating lock...', {
+      vaultAddress: VAULT_ADDRESS,
+      tokenAddress: token.address,
+      amount: amountWei.toString(),
+      duration: duration.toString()
+    });
+    
+    // Lock tokens
+    lock({
+      address: VAULT_ADDRESS,
+      abi: HodlVaultABI.abi,
+      functionName: 'lockTokens',
+      args: [token.address, amountWei, duration],
+    });
+  }, [address, hasTriggeredLock, lock, token.address, amountWei, duration, clearError]);
+
+  // Handle approval errors
+  useEffect(() => {
+    if (isApproveError && approveError) {
+      console.error('Approval transaction error:', approveError);
+      handleError(approveError, handleApprove);
+      setIsApproving(false);
+    }
+  }, [isApproveError, approveError, handleError]);
+  
+  // Handle lock errors
+  useEffect(() => {
+    if (isLockError && lockError) {
+      console.error('Lock transaction error:', lockError);
+      handleError(lockError, () => {
         setHasTriggeredLock(false);
-        return handleLock();
+        handleLock();
       });
       setIsLocking(false);
       setHasTriggeredLock(false);
     }
-  }, [address, hasTriggeredLock, lock, token.address, amountWei, duration, clearError, handleError]);
-
+  }, [isLockError, lockError, handleError]);
+  
   // Auto-proceed after approval success
   useEffect(() => {
     if (isApprovalSuccess && !lockHash && !hasTriggeredLock) {
+      console.log('Approval successful, proceeding to lock...');
       // Small delay to ensure approval is confirmed
       const timer = setTimeout(() => {
         handleLock();
@@ -115,9 +178,24 @@ export default function LockConfirmation({
     }
   }, [isApprovalSuccess, lockHash, hasTriggeredLock, handleLock]);
 
+  // Monitor approval hash
+  useEffect(() => {
+    if (approveHash) {
+      console.log('Approval transaction hash:', approveHash);
+    }
+  }, [approveHash]);
+  
+  // Monitor lock hash
+  useEffect(() => {
+    if (lockHash) {
+      console.log('Lock transaction hash:', lockHash);
+    }
+  }, [lockHash]);
+  
   // Handle success
   useEffect(() => {
     if (isLockSuccess && !hasTriggeredSuccess) {
+      console.log('Lock successful!');
       setHasTriggeredSuccess(true);
       setShowSuccessWithShare(true);
     }
@@ -215,6 +293,15 @@ export default function LockConfirmation({
           onCancel={clearError}
         />
 
+        {(!VAULT_ADDRESS || VAULT_ADDRESS === '') && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              ❌ <strong>Error:</strong> Vault contract address is not configured. 
+              Please set NEXT_PUBLIC_VAULT_ADDRESS environment variable.
+            </p>
+          </div>
+        )}
+
         <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg">
           <p className="text-sm text-warning">
             ⚠️ <strong>Warning:</strong> Once locked, tokens cannot be withdrawn until the unlock date. 
@@ -236,7 +323,7 @@ export default function LockConfirmation({
           {!approveHash ? (
             <button
               onClick={handleApprove}
-              disabled={isApproving || !VAULT_ADDRESS}
+              disabled={isApproving || !VAULT_ADDRESS || VAULT_ADDRESS === ''}
               className="flex-1 touch-target py-3 px-4 bg-base-blue text-white rounded-lg
                        hover:bg-base-blue-dark transition-all transform hover:scale-[1.02] active:scale-[0.98]
                        disabled:opacity-50 disabled:cursor-not-allowed focus-ring"

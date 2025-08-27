@@ -1,9 +1,6 @@
 /**
  * Farcaster Frame Detection and Integration Utilities
- * Enhanced with MiniKit SDK integration
  */
-
-import sdk from '@farcaster/miniapp-sdk';
 
 export interface FrameContext {
   isFrame: boolean;
@@ -180,39 +177,27 @@ export function getFrameStyles(isFrame: boolean) {
 }
 
 /**
- * MiniKit SDK Actions wrapper for social sharing
+ * Fallback share function for social sharing
  */
 export async function shareWithSDK(text: string, url?: string) {
   try {
-    // Check if SDK has context (indicates we're in a Mini App)
-    if (!sdk.context) {
-      throw new Error('Not in a Mini App context');
-    }
-    
-    // Use compose cast action
+    // Use regular browser sharing
     const shareUrl = getWarpcastShareUrl(text, url ? [url] : undefined);
-    await sdk.actions.openUrl(shareUrl);
-    
+    window.open(shareUrl, '_blank');
     return true;
   } catch (error) {
-    console.error('SDK share failed:', error);
+    console.error('Share failed:', error);
     return false;
   }
 }
 
 /**
- * Open a user profile using SDK actions
+ * Open a user profile
  */
 export async function viewProfile(username: string) {
   try {
-    // Check if SDK has context
-    if (!sdk.context) {
-      throw new Error('Not in a Mini App context');
-    }
-    
-    // Open profile URL
-    await sdk.actions.openUrl(`https://warpcast.com/${username}`);
-    
+    // Open profile URL in new tab
+    window.open(`https://warpcast.com/${username}`, '_blank');
     return true;
   } catch (error) {
     console.error('Failed to view profile:', error);
@@ -221,12 +206,8 @@ export async function viewProfile(username: string) {
 }
 
 /**
- * Check if we should use SDK actions
+ * Check if we should use SDK actions (always false now)
  */
 export function shouldUseSDKActions(): boolean {
-  try {
-    return !!sdk.context;
-  } catch {
-    return false;
-  }
+  return false;
 }

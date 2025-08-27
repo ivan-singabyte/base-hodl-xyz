@@ -3,8 +3,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import sdk from '@farcaster/miniapp-sdk';
-import { useMiniKit } from '../providers/MiniKitProvider';
 
 interface FarcasterUser {
   fid?: number;
@@ -32,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isGuest, setIsGuest] = useState(true);
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null);
-  const { isInMiniApp, user: miniKitUser } = useMiniKit();
+  const isInMiniApp = false; // Removed MiniKit support
 
   useEffect(() => {
     if (isConnected) {
@@ -41,13 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isConnected]);
 
-  // Set Farcaster user from MiniKit context
+  // Farcaster user will be set through other means if needed
   useEffect(() => {
-    if (miniKitUser) {
-      setFarcasterUser(miniKitUser);
-      setIsGuest(false);
-    }
-  }, [miniKitUser]);
+    // Reserved for future Farcaster integration
+  }, []);
 
   const requireAuth = () => {
     console.log('requireAuth called', { isConnected, farcasterUser });
@@ -59,20 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithFarcaster = useCallback(() => {
     try {
-      if (!sdk || !sdk.actions) {
-        console.log('MiniKit SDK not available or no actions');
-        return Promise.resolve();
-      }
-
-      // For now, just use the existing MiniKit context if available
-      // The actual SIWF implementation requires backend integration
-      if (miniKitUser) {
-        setFarcasterUser(miniKitUser);
-        setIsGuest(false);
-        setShowAuthModal(false);
-        return Promise.resolve();
-      }
-
       console.log('SIWF requires backend integration for production');
       // In production, you would call your backend endpoint here
       // that handles the SIWF flow
@@ -82,21 +63,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fall back to wallet connection
       return Promise.resolve();
     }
-  }, [miniKitUser]);
+  }, []);
 
   // Enhanced disconnect that clears all auth state
   const disconnect = useCallback(() => {
     // Disconnect wallet
     wagmiDisconnect();
-    // Clear Farcaster user (but keep MiniKit user if in Mini App context)
-    if (!miniKitUser) {
-      setFarcasterUser(null);
-    }
+    // Clear Farcaster user
+    setFarcasterUser(null);
     // Reset guest state
     setIsGuest(true);
     // Close any open auth modals
     setShowAuthModal(false);
-  }, [wagmiDisconnect, miniKitUser]);
+  }, [wagmiDisconnect]);
 
   return (
     <AuthContext.Provider

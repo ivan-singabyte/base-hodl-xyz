@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useMiniKit } from '../providers/MiniKitProvider';
 import { useAuth } from '../contexts/AuthContext';
 
 export function UserProfile() {
-  const { user, isInMiniApp } = useMiniKit();
   const { farcasterUser, address, isConnected, disconnect } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // Prioritize MiniKit user, then Farcaster user
-  const displayUser = user || farcasterUser;
+  // Use Farcaster user if available
+  const displayUser = farcasterUser;
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -95,13 +93,6 @@ export function UserProfile() {
             </span>
           )}
         </div>
-        
-        {/* Badge for Mini App context */}
-        {isInMiniApp && (
-          <span className="ml-auto px-2 py-1 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full">
-            Mini App
-          </span>
-        )}
         
         {/* Dropdown arrow */}
         <svg

@@ -3,8 +3,6 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatFarcasterShare, getWarpcastShareUrl } from '@/app/lib/farcaster'
-import sdk from '@farcaster/miniapp-sdk'
-import { useMiniKit } from '../providers/MiniKitProvider'
 
 interface ShareButtonProps {
   tokenSymbol: string
@@ -28,7 +26,6 @@ export default function ShareButton({
 }: ShareButtonProps) {
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
-  const { isInMiniApp, isSDKReady } = useMiniKit()
   
   const formatDuration = (durationStr: string) => {
     const durationMap: { [key: string]: string } = {
@@ -70,16 +67,9 @@ export default function ShareButton({
 
   const handleFarcasterShare = async () => {
     try {
-      // Use MiniKit SDK action if available
-      if (isInMiniApp && isSDKReady && sdk.actions) {
-        // Use SDK's compose cast action for cross-client compatibility
-        await sdk.actions.openUrl(getWarpcastShareUrl(shareText, [shareUrl]));
-      } else {
-        // Fallback to window.open for non-Mini App contexts
-        const farcasterUrl = getWarpcastShareUrl(shareText, [shareUrl])
-        window.open(farcasterUrl, '_blank')
-      }
-      
+      // Always use window.open for sharing
+      const farcasterUrl = getWarpcastShareUrl(shareText, [shareUrl])
+      window.open(farcasterUrl, '_blank')
       handlePostShare()
     } catch (error) {
       console.error('Failed to share on Farcaster:', error)
@@ -95,13 +85,8 @@ export default function ShareButton({
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`
     
     try {
-      // Use MiniKit SDK action if available
-      if (isInMiniApp && isSDKReady && sdk.actions) {
-        await sdk.actions.openUrl(twitterUrl);
-      } else {
-        window.open(twitterUrl, '_blank')
-      }
-      
+      // Always use window.open for sharing
+      window.open(twitterUrl, '_blank')
       handlePostShare()
     } catch (error) {
       console.error('Failed to share on Twitter:', error)

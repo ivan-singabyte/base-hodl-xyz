@@ -39,7 +39,7 @@ export default function LockConfirmation({
   const { writeContract: approve, data: approveHash } = useWriteContract();
   const { writeContract: lock, data: lockHash } = useWriteContract();
 
-  const { isLoading: isApprovalPending } = useWaitForTransactionReceipt({
+  const { isLoading: isApprovalPending, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
     hash: approveHash,
   });
 
@@ -56,7 +56,7 @@ export default function LockConfirmation({
     clearError();
     try {
       // Approve token spending
-      approve({
+      await approve({
         address: token.address as `0x${string}`,
         abi: [
           {
@@ -87,7 +87,7 @@ export default function LockConfirmation({
     setHasTriggeredLock(true);
     clearError();
     try {
-      lock({
+      await lock({
         address: VAULT_ADDRESS,
         abi: HodlVaultABI.abi,
         functionName: 'lockTokens',
@@ -104,12 +104,16 @@ export default function LockConfirmation({
     }
   }, [address, hasTriggeredLock, lock, token.address, amountWei, duration, clearError, handleError]);
 
-  // Auto-proceed after approval
+  // Auto-proceed after approval success
   useEffect(() => {
-    if (approveHash && !isApprovalPending && !lockHash && !hasTriggeredLock) {
-      handleLock();
+    if (isApprovalSuccess && !lockHash && !hasTriggeredLock) {
+      // Small delay to ensure approval is confirmed
+      const timer = setTimeout(() => {
+        handleLock();
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [approveHash, isApprovalPending, lockHash, hasTriggeredLock, handleLock]);
+  }, [isApprovalSuccess, lockHash, hasTriggeredLock, handleLock]);
 
   // Handle success
   useEffect(() => {

@@ -91,15 +91,26 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
           return;
         }
         
-        // If not found, create token with contract reads (same as TokenSelector custom token)
-        console.log('[LockCard] Creating token with contract reads');
+        // Detect if we're in Coinbase app
+        const isCoinbaseApp = typeof window !== 'undefined' && (
+          /CoinbaseWallet/i.test(navigator.userAgent) || 
+          (window.ethereum && 'isCoinbaseWallet' in window.ethereum)
+        );
+        
+        console.log('[LockCard] Coinbase app detected:', isCoinbaseApp);
+        
+        // If not found, create minimal token (skip blockchain reads in Coinbase app)
+        console.log('[LockCard] Creating minimal token object');
         let symbol = 'TOKEN';
         let name = 'Unknown Token';
         let decimals = 18;
         
-        if (publicClient) {
+        // Only try blockchain reads on desktop (not in Coinbase app)
+        if (!isCoinbaseApp && publicClient) {
           try {
-            // Try to get symbol with timeout
+            console.log('[LockCard] Attempting blockchain reads (desktop only)');
+            
+            // Try to get symbol with very short timeout
             const symbolPromise = publicClient.readContract({
               address: lock.token,
               abi: erc20Abi,
@@ -109,13 +120,13 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
             symbol = await Promise.race([
               symbolPromise,
               new Promise<string>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
+                setTimeout(() => reject(new Error('Timeout')), 1000)
               )
             ]).catch(() => 'TOKEN');
             
             console.log('[LockCard] Got symbol:', symbol);
             
-            // Try to get decimals with timeout
+            // Try to get decimals with very short timeout
             const decimalsPromise = publicClient.readContract({
               address: lock.token,
               abi: erc20Abi,
@@ -125,13 +136,13 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
             decimals = await Promise.race([
               decimalsPromise,
               new Promise<number>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
+                setTimeout(() => reject(new Error('Timeout')), 1000)
               )
             ]).catch(() => 18);
             
             console.log('[LockCard] Got decimals:', decimals);
             
-            // Try to get name with timeout
+            // Try to get name with very short timeout
             const namePromise = publicClient.readContract({
               address: lock.token,
               abi: erc20Abi,
@@ -141,7 +152,7 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
             name = await Promise.race([
               namePromise,
               new Promise<string>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
+                setTimeout(() => reject(new Error('Timeout')), 1000)
               )
             ]).catch(() => symbol || 'Unknown Token');
             
@@ -149,17 +160,19 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
           } catch (err) {
             console.warn('[LockCard] Error reading contract data:', err);
           }
+        } else if (isCoinbaseApp) {
+          console.log('[LockCard] Skipping blockchain reads in Coinbase app');
         }
         
-        // Create complete Token object with fallback image
+        // Create Token object with null image (let TokenImage handle fallback)
         const token: Token = {
           address: lock.token,
           chainId: chainId,
           name: name,
           symbol: symbol,
           decimals: decimals,
-          // Generate fallback image URL like TokenSelector does
-          image: `https://ui-avatars.com/api/?name=${symbol}&background=0052FF&color=fff&size=128`,
+          // Use null instead of external URL - TokenImage will handle the fallback
+          image: null,
         };
         
         console.log('[LockCard] Created token object:', token);
@@ -168,14 +181,15 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
       } catch (error) {
         console.error('[LockCard] Error fetching token info:', error);
         
-        // Final fallback with generated image
+        // Final fallback with null image
         const fallbackToken: Token = {
           address: lock.token,
           chainId: chainId,
           name: 'Unknown Token',
           symbol: 'TOKEN',
           decimals: 18,
-          image: `https://ui-avatars.com/api/?name=TOKEN&background=0052FF&color=fff&size=128`,
+          // Use null instead of external URL
+          image: null,
         };
         setTokenInfo(fallbackToken);
       }

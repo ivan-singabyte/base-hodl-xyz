@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { formatUnits, parseAbi } from 'viem';
-import { useWriteContract, useWaitForTransactionReceipt, useChainId, useReadContracts } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useChainId, useReadContracts, usePublicClient } from 'wagmi';
 import { type Token, TokenImage } from '@coinbase/onchainkit/token';
+import { erc20Abi } from 'viem';
 import Countdown from './Countdown';
 import ShareButton from './ShareButton';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
-import { fetchTokenByAddress } from '@/app/lib/tokenService';
+import { 
+  fetchTokenByAddress, 
+  KNOWN_BASE_SEPOLIA_TOKENS,
+  POPULAR_BASE_TOKENS 
+} from '@/app/lib/tokenService';
+import { baseSepolia, base } from 'viem/chains';
 
 // ERC-20 ABI for token metadata
 const ERC20_ABI = parseAbi([
@@ -37,97 +43,153 @@ const VAULT_ADDRESS = rawVaultAddress.trim().replace(/\s+/g, '').replace(/\n/g, 
 export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardProps) {
   const [isClaimable, setIsClaimable] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
-  const [tokenInfo, setTokenInfo] = useState<Partial<Token>>({
+  const [tokenInfo, setTokenInfo] = useState<Token>({
+    address: lock.token,
+    chainId: 1,
     symbol: 'TOKEN',
     decimals: 18,
     name: 'Unknown Token',
+    image: null,
   });
   
   const chainId = useChainId();
-  
-  // Read token metadata from contract as fallback
-  const { data: tokenMetadata } = useReadContracts({
-    contracts: [
-      {
-        address: lock.token,
-        abi: ERC20_ABI,
-        functionName: 'name',
-      },
-      {
-        address: lock.token,
-        abi: ERC20_ABI,
-        functionName: 'symbol',
-      },
-      {
-        address: lock.token,
-        abi: ERC20_ABI,
-        functionName: 'decimals',
-      },
-    ],
-  });
+  const publicClient = usePublicClient();
   
   const { writeContract: claim, data: claimHash } = useWriteContract();
   const { isLoading: isClaimPending, isSuccess: isClaimSuccess } = useWaitForTransactionReceipt({
     hash: claimHash,
   });
 
-  // Get token info on mount
+  // Get token info on mount - using same approach as TokenSelector
   useEffect(() => {
     const getTokenInfo = async () => {
+      console.log('[LockCard] Fetching token info for:', lock.token, 'on chain:', chainId);
+      
       try {
-        // Try to fetch token by address for the current chain
-        const apiToken = await fetchTokenByAddress(lock.token, chainId);
-        if (apiToken) {
-          setTokenInfo(apiToken);
-          return;
-        }
+        const normalizedAddress = lock.token.toLowerCase();
         
-        // If API doesn't have it, try contract metadata
-        if (tokenMetadata && tokenMetadata.length === 3) {
-          const [nameResult, symbolResult, decimalsResult] = tokenMetadata;
-          
-          if (
-            nameResult?.status === 'success' &&
-            symbolResult?.status === 'success' &&
-            decimalsResult?.status === 'success'
-          ) {
-            setTokenInfo({
-              address: lock.token,
-              chainId: chainId,
-              name: nameResult.result as string,
-              symbol: symbolResult.result as string,
-              decimals: Number(decimalsResult.result),
-              image: null,
-            });
+        // First check known token lists (same as TokenSelector)
+        if (chainId === baseSepolia.id) {
+          const knownToken = KNOWN_BASE_SEPOLIA_TOKENS.find(
+            t => t.address.toLowerCase() === normalizedAddress
+          );
+          if (knownToken) {
+            console.log('[LockCard] Found in known testnet tokens');
+            setTokenInfo(knownToken);
+            return;
+          }
+        } else if (chainId === base.id) {
+          const popularToken = POPULAR_BASE_TOKENS.find(
+            t => t.address.toLowerCase() === normalizedAddress
+          );
+          if (popularToken) {
+            console.log('[LockCard] Found in popular mainnet tokens');
+            setTokenInfo(popularToken);
             return;
           }
         }
         
-        // Final fallback
-        setTokenInfo({
+        // Try to fetch from API (with proper timeout)
+        console.log('[LockCard] Attempting API fetch');
+        const apiToken = await fetchTokenByAddress(lock.token, chainId);
+        if (apiToken) {
+          console.log('[LockCard] Found via API:', apiToken);
+          setTokenInfo(apiToken);
+          return;
+        }
+        
+        // If not found, create token with contract reads (same as TokenSelector custom token)
+        console.log('[LockCard] Creating token with contract reads');
+        let symbol = 'TOKEN';
+        let name = 'Unknown Token';
+        let decimals = 18;
+        
+        if (publicClient) {
+          try {
+            // Try to get symbol with timeout
+            const symbolPromise = publicClient.readContract({
+              address: lock.token,
+              abi: erc20Abi,
+              functionName: 'symbol',
+            }) as Promise<string>;
+            
+            symbol = await Promise.race([
+              symbolPromise,
+              new Promise<string>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+              )
+            ]).catch(() => 'TOKEN');
+            
+            console.log('[LockCard] Got symbol:', symbol);
+            
+            // Try to get decimals with timeout
+            const decimalsPromise = publicClient.readContract({
+              address: lock.token,
+              abi: erc20Abi,
+              functionName: 'decimals',
+            }) as Promise<number>;
+            
+            decimals = await Promise.race([
+              decimalsPromise,
+              new Promise<number>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+              )
+            ]).catch(() => 18);
+            
+            console.log('[LockCard] Got decimals:', decimals);
+            
+            // Try to get name with timeout
+            const namePromise = publicClient.readContract({
+              address: lock.token,
+              abi: erc20Abi,
+              functionName: 'name',
+            }) as Promise<string>;
+            
+            name = await Promise.race([
+              namePromise,
+              new Promise<string>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+              )
+            ]).catch(() => symbol || 'Unknown Token');
+            
+            console.log('[LockCard] Got name:', name);
+          } catch (err) {
+            console.warn('[LockCard] Error reading contract data:', err);
+          }
+        }
+        
+        // Create complete Token object with fallback image
+        const token: Token = {
           address: lock.token,
           chainId: chainId,
-          name: 'Unknown Token',
-          symbol: 'TOKEN',
-          decimals: 18,
-          image: null,
-        });
+          name: name,
+          symbol: symbol,
+          decimals: decimals,
+          // Generate fallback image URL like TokenSelector does
+          image: `https://ui-avatars.com/api/?name=${symbol}&background=0052FF&color=fff&size=128`,
+        };
+        
+        console.log('[LockCard] Created token object:', token);
+        setTokenInfo(token);
+        
       } catch (error) {
-        console.error('Error fetching token info:', error);
-        // Fallback to minimal token info
-        setTokenInfo({
+        console.error('[LockCard] Error fetching token info:', error);
+        
+        // Final fallback with generated image
+        const fallbackToken: Token = {
           address: lock.token,
           chainId: chainId,
           name: 'Unknown Token',
           symbol: 'TOKEN',
           decimals: 18,
-          image: null,
-        });
+          image: `https://ui-avatars.com/api/?name=TOKEN&background=0052FF&color=fff&size=128`,
+        };
+        setTokenInfo(fallbackToken);
       }
     };
     
     getTokenInfo();
-  }, [lock.token, chainId, tokenMetadata]);
+  }, [lock.token, chainId, publicClient]);
 
   // Token object creation removed - using tokenInfo directly
 
@@ -204,7 +266,7 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <TokenImage token={tokenInfo as Token} size={40} />
+          <TokenImage token={tokenInfo} size={40} />
           <div>
             <h3 className="font-semibold text-lg">{tokenInfo.symbol}</h3>
             <p className="text-sm text-foreground-secondary">{tokenInfo.name}</p>
@@ -223,7 +285,7 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
       <div className="mb-4">
         <p className="text-sm text-foreground-secondary mb-1">Amount Locked</p>
         <p className="text-2xl font-bold text-foreground">
-          {formatAmount(lock.amount, tokenInfo.decimals || 18)} {tokenInfo.symbol}
+          {formatAmount(lock.amount, tokenInfo.decimals)} {tokenInfo.symbol}
         </p>
       </div>
 
@@ -276,8 +338,8 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
               {isClaimPending ? 'Claiming...' : 'Claim Tokens'}
             </button>
             <ShareButton
-              tokenSymbol={tokenInfo.symbol || 'TOKEN'}
-              amount={formatAmount(lock.amount, tokenInfo.decimals || 18)}
+              tokenSymbol={tokenInfo.symbol}
+              amount={formatAmount(lock.amount, tokenInfo.decimals)}
               duration={String((Number(lock.unlockTime - lock.lockTime)) / 86400)}
               unlockDate={new Date(Number(lock.unlockTime) * 1000)}
               lockId={lockIndex}
@@ -288,8 +350,8 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
           <div className="space-y-3">
             <Countdown unlockTime={lock.unlockTime} />
             <ShareButton
-              tokenSymbol={tokenInfo.symbol || 'TOKEN'}
-              amount={formatAmount(lock.amount, tokenInfo.decimals || 18)}
+              tokenSymbol={tokenInfo.symbol}
+              amount={formatAmount(lock.amount, tokenInfo.decimals)}
               duration={String((Number(lock.unlockTime - lock.lockTime)) / 86400)}
               unlockDate={new Date(Number(lock.unlockTime) * 1000)}
               lockId={lockIndex}

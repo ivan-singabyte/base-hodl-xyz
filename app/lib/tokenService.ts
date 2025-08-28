@@ -202,66 +202,61 @@ export async function fetchTokenByAddress(address: string, chainId: number = bas
     return popularToken;
   }
 
-  try {
-    // Try to fetch from API (only works for mainnet)
-    if (chainId === base.id) {
-      console.log('[tokenService] Attempting OnchainKit API fetch');
+  // Try to fetch from API (only works for mainnet)
+  if (chainId === base.id) {
+    console.log('[tokenService] Attempting OnchainKit API fetch');
+    
+    try {
+      // Use Promise.race to ensure we don't hang
+      const fetchPromise = getTokens({ 
+        limit: '5', 
+        search: address 
+      });
       
-      // Add timeout to prevent hanging on mobile
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutPromise = new Promise<null>((resolve) => {
+        setTimeout(() => {
+          console.log('[tokenService] API timeout reached');
+          resolve(null);
+        }, 3000); // Reduced timeout for faster fallback
+      });
       
-      try {
-        const result = await getTokens({ 
-          limit: '5', 
-          search: address 
-        });
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      if (result && Array.isArray(result) && result.length > 0) {
+        // Find exact match by address
+        const exactMatch = result.find(
+          t => t.address.toLowerCase() === normalizedAddress
+        );
         
-        clearTimeout(timeoutId);
-        
-        if (Array.isArray(result) && result.length > 0) {
-          // Find exact match by address
-          const exactMatch = result.find(
-            t => t.address.toLowerCase() === normalizedAddress
-          );
-          
-          if (exactMatch) {
-            console.log('[tokenService] Found exact match in API');
-            const token = {
-              ...exactMatch,
-              chainId: chainId,
-            };
-            singleTokenCache.set(cacheKey, token);
-            return token;
-          }
-          
-          // If no exact match but results exist, might be a search result
-          console.log('[tokenService] No exact match, checking first result');
-          if (result[0].address.toLowerCase() === normalizedAddress) {
-            const token = {
-              ...result[0],
-              chainId: chainId,
-            };
-            singleTokenCache.set(cacheKey, token);
-            return token;
-          }
+        if (exactMatch) {
+          console.log('[tokenService] Found exact match in API');
+          const token = {
+            ...exactMatch,
+            chainId: chainId,
+          };
+          singleTokenCache.set(cacheKey, token);
+          return token;
         }
         
-        console.log('[tokenService] No results from API');
-      } catch (apiError) {
-        if (apiError instanceof Error && apiError.name === 'AbortError') {
-          console.warn('[tokenService] API request timed out');
-        } else {
-          console.warn('[tokenService] API error:', apiError);
+        // If no exact match but results exist, check if first result matches
+        console.log('[tokenService] No exact match, checking first result');
+        if (result[0].address.toLowerCase() === normalizedAddress) {
+          const token = {
+            ...result[0],
+            chainId: chainId,
+          };
+          singleTokenCache.set(cacheKey, token);
+          return token;
         }
       }
+      
+      console.log('[tokenService] No matching results from API');
+    } catch (error) {
+      console.warn('[tokenService] API error:', error);
     }
-    
-    return null;
-  } catch (error) {
-    console.error(`[tokenService] Failed to fetch token ${address}:`, error);
-    return null;
   }
+  
+  return null;
 }
 
 /**

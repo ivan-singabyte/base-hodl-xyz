@@ -160,116 +160,109 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
     setCustomTokenError('');
     setIsAddingCustomToken(true);
     
+    const tokenAddress = customTokenAddress as `0x${string}`;
+    
+    // Create a minimal token immediately - this always works
+    let token: Token = {
+      address: tokenAddress,
+      chainId: chainId,
+      name: 'Custom Token',
+      symbol: 'TOKEN',
+      decimals: 18,
+      image: null,
+    };
+    
     try {
-      const tokenAddress = customTokenAddress as `0x${string}`;
-      console.log('[TokenSelector] Attempting to fetch token:', tokenAddress, 'on chain:', chainId);
+      console.log('[TokenSelector] Created minimal token, attempting to enrich...');
       
-      // First try to fetch from API/cache
-      let token = await fetchTokenByAddress(customTokenAddress, chainId);
-      console.log('[TokenSelector] API fetch result:', token);
+      // Try to fetch better data, but with aggressive timeouts and fallbacks
+      // This is a "best effort" - if it fails, we still have a working token
       
-      // If not found via API, create a minimal token without blockchain reads
-      // This is more reliable on mobile/Coinbase app
-      if (!token) {
-        console.log('[TokenSelector] Token not found in API, creating minimal token');
+      // First, try the API with a short timeout (2 seconds)
+      const apiPromise = fetchTokenByAddress(customTokenAddress, chainId);
+      const apiTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+      
+      const apiToken = await Promise.race([apiPromise, apiTimeout]);
+      
+      if (apiToken) {
+        console.log('[TokenSelector] API provided token data:', apiToken);
+        token = apiToken;
+      } else {
+        console.log('[TokenSelector] API timeout or no data, attempting blockchain enrichment');
         
-        // For mobile compatibility, create a simple token object
-        // without trying to read from blockchain which can hang
-        token = {
-          address: tokenAddress,
-          chainId: chainId,
-          name: 'Custom Token',
-          symbol: 'TOKEN',
-          decimals: 18,
-          image: null,
-        };
+        // Only try blockchain reads on desktop (not in Coinbase app)
+        // Detect Coinbase app by checking if we're in a WebView with limited features
+        const isCoinbaseApp = /CoinbaseWallet/i.test(navigator.userAgent) || 
+                             (window.ethereum && 'isCoinbaseWallet' in window.ethereum);
         
-        // Optionally try to fetch metadata, but don't block on it
-        if (publicClient) {
-          console.log('[TokenSelector] Attempting to enrich token data from blockchain');
-          
+        if (!isCoinbaseApp && publicClient) {
+          // Try to get just the symbol with very short timeout (1 second)
           try {
-            // Try to get symbol first (most important)
-            const symbol = await Promise.race([
-              publicClient.readContract({
-                address: tokenAddress,
-                abi: erc20Abi,
-                functionName: 'symbol',
-              }) as Promise<string>,
-              new Promise<string>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
-              )
-            ]).catch((err: unknown) => {
-              console.warn('[TokenSelector] Failed to fetch symbol:', err);
-              return 'TOKEN';
-            });
+            const symbolPromise = publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20Abi,
+              functionName: 'symbol',
+            }) as Promise<string>;
+            
+            const symbolTimeout = new Promise<string>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 1000)
+            );
+            
+            const symbol = await Promise.race([symbolPromise, symbolTimeout]).catch(() => null);
             
             if (symbol && typeof symbol === 'string') {
               token.symbol = symbol;
-              console.log('[TokenSelector] Updated symbol:', symbol);
+              console.log('[TokenSelector] Got symbol from blockchain:', symbol);
             }
             
-            // Try to get decimals
-            const decimals = await Promise.race([
-              publicClient.readContract({
-                address: tokenAddress,
-                abi: erc20Abi,
-                functionName: 'decimals',
-              }) as Promise<number>,
-              new Promise<number>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
-              )
-            ]).catch((err: unknown) => {
-              console.warn('[TokenSelector] Failed to fetch decimals:', err);
-              return 18;
-            });
+            // Try decimals with very short timeout
+            const decimalsPromise = publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20Abi,
+              functionName: 'decimals',
+            }) as Promise<number>;
+            
+            const decimalsTimeout = new Promise<number>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 1000)
+            );
+            
+            const decimals = await Promise.race([decimalsPromise, decimalsTimeout]).catch(() => null);
             
             if (decimals && typeof decimals === 'number') {
               token.decimals = decimals;
-              console.log('[TokenSelector] Updated decimals:', decimals);
+              console.log('[TokenSelector] Got decimals from blockchain:', decimals);
             }
-            
-            // Try to get name (least important)
-            const name = await Promise.race([
-              publicClient.readContract({
-                address: tokenAddress,
-                abi: erc20Abi,
-                functionName: 'name',
-              }) as Promise<string>,
-              new Promise<string>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
-              )
-            ]).catch((err: unknown) => {
-              console.warn('[TokenSelector] Failed to fetch name:', err);
-              return token?.symbol || 'Custom Token';
-            });
-            
-            if (name && typeof name === 'string') {
-              token.name = name;
-              console.log('[TokenSelector] Updated name:', name);
-            }
-          } catch (enrichError) {
-            console.warn('[TokenSelector] Failed to enrich token data:', enrichError);
-            // Continue with minimal token data
+          } catch (err) {
+            console.warn('[TokenSelector] Blockchain read failed, using defaults:', err);
           }
+        } else {
+          console.log('[TokenSelector] Skipping blockchain reads (Coinbase app detected or no client)');
         }
       }
       
       console.log('[TokenSelector] Final token object:', token);
       
       // Add to available tokens list if not already there
-      if (!availableTokens.find(t => t.address.toLowerCase() === token!.address.toLowerCase())) {
-        setAvailableTokens(prev => [...prev, token!]);
+      if (!availableTokens.find(t => t.address.toLowerCase() === token.address.toLowerCase())) {
+        setAvailableTokens(prev => [...prev, token]);
         console.log('[TokenSelector] Added token to available list');
       }
       
+      // Select the token
       handleTokenSelect(token);
       setCustomTokenAddress('');
       setCustomTokenError('');
       console.log('[TokenSelector] Token selection complete');
+      
     } catch (error) {
-      console.error('[TokenSelector] Error adding custom token:', error);
-      setCustomTokenError('Failed to add token. Please try again.');
+      console.error('[TokenSelector] Unexpected error:', error);
+      // Even if something fails, we still add the minimal token
+      if (!availableTokens.find(t => t.address.toLowerCase() === token.address.toLowerCase())) {
+        setAvailableTokens(prev => [...prev, token]);
+      }
+      handleTokenSelect(token);
+      setCustomTokenAddress('');
+      setCustomTokenError('');
     } finally {
       setIsAddingCustomToken(false);
     }

@@ -1,0 +1,28 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    
+    steps:
+      - name: Trigger Vercel Staging Deployment
+        run: |
+          curl -X POST "${{ secrets.VERCEL_STAGING_DEPLOY_HOOK }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+          echo "✅ Staging deployment triggered"
+      
+      - name: Wait for deployment
+        run: sleep 10
+        
+      - name: Deployment Info
+        run: |
+          echo "🚀 Deployment triggered for staging environment"
+          echo "📍 URL: https://base-hodl-staging.vercel.app"
+          echo "🔗 Check status: https://vercel.com/ivan-singabytes-projects/base-hodl-staging"

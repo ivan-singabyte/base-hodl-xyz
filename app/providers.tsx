@@ -16,6 +16,7 @@ import {
 } from '@rainbow-me/rainbowkit/wallets';
 import '@rainbow-me/rainbowkit/styles.css';
 import type { ReactNode } from 'react';
+import { isStaging } from './lib/config';
 
 const queryClient = new QueryClient();
 
@@ -42,8 +43,13 @@ const connectors = connectorsForWallets(
   }
 );
 
+// Determine chains based on environment
+// In staging, ONLY use Sepolia to prevent mainnet connections
+const chains = isStaging ? [baseSepolia] : [base, baseSepolia];
+const defaultChain = isStaging ? baseSepolia : base;
+
 const wagmiConfig = createConfig({
-  chains: [base, baseSepolia],
+  chains: chains as [typeof baseSepolia] | [typeof base, typeof baseSepolia],
   connectors,
   transports: {
     [base.id]: http(),
@@ -56,8 +62,8 @@ function OnchainKitProviderWrapper({ children }: { children: ReactNode }) {
   const chainId = useChainId();
   const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY?.trim() || '';
   
-  // Select the appropriate chain based on current connection
-  const currentChain = chainId === baseSepolia.id ? baseSepolia : base;
+  // In staging, force Sepolia. In production, use the connected chain or default to mainnet
+  const currentChain = isStaging ? baseSepolia : (chainId === baseSepolia.id ? baseSepolia : base);
   
   return (
     <OnchainKitProvider
@@ -70,7 +76,10 @@ function OnchainKitProviderWrapper({ children }: { children: ReactNode }) {
         }
       }}
     >
-      <RainbowKitProvider modalSize="compact">
+      <RainbowKitProvider 
+        modalSize="compact"
+        initialChain={defaultChain}
+      >
         {children}
       </RainbowKitProvider>
     </OnchainKitProvider>

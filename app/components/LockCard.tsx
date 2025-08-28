@@ -221,6 +221,14 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
   const handleClaim = async () => {
     if (!isClaimable || isClaiming) return;
     
+    console.log(`[LockCard] Attempting to claim lock with ID: ${lockIndex}`);
+    console.log(`[LockCard] Lock details:`, {
+      token: lock.token,
+      amount: lock.amount.toString(),
+      unlockTime: lock.unlockTime.toString(),
+      claimed: lock.claimed
+    });
+    
     setIsClaiming(true);
     try {
       claim({
@@ -230,7 +238,7 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
         args: [BigInt(lockIndex)],
       });
     } catch (error) {
-      console.error('Claim failed:', error);
+      console.error(`[LockCard] Claim failed for lock ID ${lockIndex}:`, error);
       setIsClaiming(false);
     }
   };

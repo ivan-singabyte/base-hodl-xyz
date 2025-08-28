@@ -1,14 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { formatUnits } from 'viem';
-import { useWriteContract, useWaitForTransactionReceipt, useChainId } from 'wagmi';
-import { baseSepolia } from 'viem/chains';
+import { formatUnits, parseAbi } from 'viem';
+import { useWriteContract, useWaitForTransactionReceipt, useChainId, useReadContracts } from 'wagmi';
 import { type Token, TokenImage } from '@coinbase/onchainkit/token';
 import Countdown from './Countdown';
 import ShareButton from './ShareButton';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
-import { KNOWN_BASE_SEPOLIA_TOKENS_MAP, fetchTokenByAddress } from '@/app/lib/tokenService';
+import { fetchTokenByAddress } from '@/app/lib/tokenService';
+
+// ERC-20 ABI for token metadata
+const ERC20_ABI = parseAbi([
+  'function name() view returns (string)',
+  'function symbol() view returns (string)',
+  'function decimals() view returns (uint8)',
+]);
 
 interface Lock {
   token: `0x${string}`;
@@ -38,6 +44,28 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
   });
   
   const chainId = useChainId();
+  
+  // Read token metadata from contract as fallback
+  const { data: tokenMetadata } = useReadContracts({
+    contracts: [
+      {
+        address: lock.token,
+        abi: ERC20_ABI,
+        functionName: 'name',
+      },
+      {
+        address: lock.token,
+        abi: ERC20_ABI,
+        functionName: 'symbol',
+      },
+      {
+        address: lock.token,
+        abi: ERC20_ABI,
+        functionName: 'decimals',
+      },
+    ],
+  });
+  
   const { writeContract: claim, data: claimHash } = useWriteContract();
   const { isLoading: isClaimPending, isSuccess: isClaimSuccess } = useWaitForTransactionReceipt({
     hash: claimHash,
@@ -46,24 +74,60 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
   // Get token info on mount
   useEffect(() => {
     const getTokenInfo = async () => {
-      // For Base Sepolia, check the known tokens list
-      if (chainId === baseSepolia.id) {
-        const knownToken = KNOWN_BASE_SEPOLIA_TOKENS_MAP[lock.token.toLowerCase()];
-        if (knownToken) {
-          setTokenInfo(knownToken);
+      try {
+        // Try to fetch token by address for the current chain
+        const apiToken = await fetchTokenByAddress(lock.token, chainId);
+        if (apiToken) {
+          setTokenInfo(apiToken);
           return;
         }
-      }
-      
-      // For Base mainnet, fetch from API
-      const apiToken = await fetchTokenByAddress(lock.token);
-      if (apiToken) {
-        setTokenInfo(apiToken);
+        
+        // If API doesn't have it, try contract metadata
+        if (tokenMetadata && tokenMetadata.length === 3) {
+          const [nameResult, symbolResult, decimalsResult] = tokenMetadata;
+          
+          if (
+            nameResult?.status === 'success' &&
+            symbolResult?.status === 'success' &&
+            decimalsResult?.status === 'success'
+          ) {
+            setTokenInfo({
+              address: lock.token,
+              chainId: chainId,
+              name: nameResult.result as string,
+              symbol: symbolResult.result as string,
+              decimals: Number(decimalsResult.result),
+              image: null,
+            });
+            return;
+          }
+        }
+        
+        // Final fallback
+        setTokenInfo({
+          address: lock.token,
+          chainId: chainId,
+          name: 'Unknown Token',
+          symbol: 'TOKEN',
+          decimals: 18,
+          image: null,
+        });
+      } catch (error) {
+        console.error('Error fetching token info:', error);
+        // Fallback to minimal token info
+        setTokenInfo({
+          address: lock.token,
+          chainId: chainId,
+          name: 'Unknown Token',
+          symbol: 'TOKEN',
+          decimals: 18,
+          image: null,
+        });
       }
     };
     
     getTokenInfo();
-  }, [lock.token, chainId]);
+  }, [lock.token, chainId, tokenMetadata]);
 
   // Token object creation removed - using tokenInfo directly
 

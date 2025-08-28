@@ -182,17 +182,43 @@ export async function fetchTokenByAddress(address: string, chainId: number = bas
       singleTokenCache.set(cacheKey, testnetToken);
       return testnetToken;
     }
+    // If not in known list, return null (don't try API for testnet)
+    return null;
+  }
+
+  // For mainnet, first check popular tokens
+  const popularToken = POPULAR_BASE_TOKENS.find(
+    t => t.address.toLowerCase() === normalizedAddress
+  );
+  if (popularToken) {
+    singleTokenCache.set(cacheKey, popularToken);
+    return popularToken;
   }
 
   try {
     // Try to fetch from API (only works for mainnet)
     if (chainId === base.id) {
       const result = await getTokens({ 
-        limit: '1', 
+        limit: '5', 
         search: address 
       });
       
       if (Array.isArray(result) && result.length > 0) {
+        // Find exact match by address
+        const exactMatch = result.find(
+          t => t.address.toLowerCase() === normalizedAddress
+        );
+        
+        if (exactMatch) {
+          const token = {
+            ...exactMatch,
+            chainId: chainId,
+          };
+          singleTokenCache.set(cacheKey, token);
+          return token;
+        }
+        
+        // If no exact match, use first result
         const token = {
           ...result[0],
           chainId: chainId,

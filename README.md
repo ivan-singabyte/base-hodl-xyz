@@ -1,7 +1,7 @@
 # 🔒 HODL Vault - Time-Locked Token Vault dApp
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTOR_GUIDE.md)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fivan-singabyte%2Fbase-hodl-xyz&env=NEXT_PUBLIC_ONCHAINKIT_API_KEY,NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,NEXT_PUBLIC_VAULT_ADDRESS&envDescription=API%20Keys%20needed%20for%20HODL%20Vault&envLink=https%3A%2F%2Fgithub.com%2Fivan-singabyte%2Fbase-hodl-xyz%2Fblob%2Fmain%2F.env.example)
 
 A decentralized application for locking tokens with time-based restrictions on the Base network. Built with Next.js, OnchainKit, and smart contracts.
@@ -127,11 +127,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Contributions are welcome! We love our contributors and appreciate your help making HODL Vault better.
 
-Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
-- How to report bugs
-- How to suggest features
-- How to submit pull requests
-- Development setup and workflow
+### For Approved Contributors
+- **Direct push access** to `staging` branch - no PR approvals needed!
+- Automatic deployments to https://base-hodl-staging.vercel.app
+- Test with Base Sepolia testnet tokens
+
+See our [Contributor Guide](CONTRIBUTOR_GUIDE.md) for:
+- Quick start instructions
+- Staging environment setup  
+- Direct push workflow
+- Testing on Base Sepolia
+
+For general contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🌟 Contributors
 

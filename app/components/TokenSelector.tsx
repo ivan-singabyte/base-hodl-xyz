@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Token, TokenSelectDropdown } from '@coinbase/onchainkit/token';
-import { useAccount, useBalance, useChainId, useReadContracts } from 'wagmi';
+import { useAccount, useBalance, useChainId, useReadContracts, usePublicClient } from 'wagmi';
 import { formatUnits, isAddress, erc20Abi } from 'viem';
 import { 
   getDefaultTokens,
@@ -20,13 +20,15 @@ interface TokenSelectorProps {
 export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSelectorProps) {
   const { address } = useAccount();
   const chainId = useChainId();
+  const publicClient = usePublicClient();
   
   const [allTokens, setAllTokens] = useState<Token[]>([]);
   const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [customTokenAddress, setCustomTokenAddress] = useState('');
   const [customTokenError, setCustomTokenError] = useState('');
-  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [showCustomTokenInput, setShowCustomTokenInput] = useState(false);
+  const [isAddingCustomToken, setIsAddingCustomToken] = useState(false);
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -137,7 +139,9 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
 
   const handleTokenSelect = (token: Token) => {
     onTokenSelect(token);
-    setIsAddingCustom(false);
+    setShowCustomTokenInput(false);
+    setCustomTokenAddress('');
+    setCustomTokenError('');
   };
 
   const handleCustomTokenAdd = async () => {
@@ -151,43 +155,71 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
       return;
     }
 
+    if (!publicClient) {
+      setCustomTokenError('Web3 client not available');
+      return;
+    }
+
     setCustomTokenError('');
-    setIsAddingCustom(true);
+    setIsAddingCustomToken(true);
     
     try {
-      // Try to fetch token information
-      const token = await fetchTokenByAddress(customTokenAddress, chainId);
+      // First try to fetch from API/cache
+      let token = await fetchTokenByAddress(customTokenAddress, chainId);
       
-      if (token) {
-        // Add to available tokens list if not already there
-        if (!availableTokens.find(t => t.address.toLowerCase() === token.address.toLowerCase())) {
-          setAvailableTokens(prev => [...prev, token]);
+      // If not found via API, fetch directly from blockchain
+      if (!token) {
+        try {
+          // Fetch token metadata directly from the contract
+          const tokenAddress = customTokenAddress as `0x${string}`;
+          
+          const [name, symbol, decimals] = await Promise.all([
+            publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20Abi,
+              functionName: 'name',
+            }).catch(() => 'Unknown Token'),
+            publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20Abi,
+              functionName: 'symbol',
+            }).catch(() => 'UNKNOWN'),
+            publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20Abi,
+              functionName: 'decimals',
+            }).catch(() => 18),
+          ]);
+
+          token = {
+            address: tokenAddress,
+            chainId: chainId,
+            name: name as string,
+            symbol: symbol as string,
+            decimals: decimals as number,
+            image: null,
+          };
+        } catch (contractError) {
+          console.error('Failed to fetch token metadata from contract:', contractError);
+          setCustomTokenError('Invalid ERC-20 token contract');
+          setIsAddingCustomToken(false);
+          return;
         }
-        handleTokenSelect(token);
-        setCustomTokenAddress('');
-        setCustomTokenError('');
-      } else {
-        // Create a minimal token object if not found
-        const minimalToken: Token = {
-          address: customTokenAddress as `0x${string}`,
-          chainId: chainId,
-          name: 'Custom Token',
-          symbol: 'CUSTOM',
-          decimals: 18,
-          image: null,
-        };
-        
-        // Add to available tokens list
-        setAvailableTokens(prev => [...prev, minimalToken]);
-        handleTokenSelect(minimalToken);
-        setCustomTokenAddress('');
-        setCustomTokenError('');
       }
+      
+      // Add to available tokens list if not already there
+      if (!availableTokens.find(t => t.address.toLowerCase() === token!.address.toLowerCase())) {
+        setAvailableTokens(prev => [...prev, token!]);
+      }
+      
+      handleTokenSelect(token);
+      setCustomTokenAddress('');
+      setCustomTokenError('');
     } catch (error) {
       console.error('Error adding custom token:', error);
       setCustomTokenError('Failed to add token');
     } finally {
-      setIsAddingCustom(false);
+      setIsAddingCustomToken(false);
     }
   };
 
@@ -223,9 +255,9 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
 
       {/* Custom Token Addition */}
       <div className="border-t border-border pt-4">
-        {!isAddingCustom ? (
+        {!showCustomTokenInput ? (
           <button
-            onClick={() => setIsAddingCustom(true)}
+            onClick={() => setShowCustomTokenInput(true)}
             className="w-full text-sm text-base-blue hover:text-base-blue-light font-medium transition-colors"
           >
             + Add Custom Token by Address
@@ -242,6 +274,7 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
               }}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-base-blue/50 focus:border-base-blue text-sm"
               autoFocus
+              disabled={isAddingCustomToken}
             />
             {customTokenError && (
               <p className="text-xs text-error">{customTokenError}</p>
@@ -249,18 +282,26 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
             <div className="flex gap-2">
               <button
                 onClick={handleCustomTokenAdd}
-                disabled={!customTokenAddress}
-                className="flex-1 px-3 py-1.5 bg-base-blue text-white rounded-lg hover:bg-base-blue-dark disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                disabled={!customTokenAddress || isAddingCustomToken}
+                className="flex-1 px-3 py-1.5 bg-base-blue text-white rounded-lg hover:bg-base-blue-dark disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
-                Add Token
+                {isAddingCustomToken ? (
+                  <>
+                    <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  'Add Token'
+                )}
               </button>
               <button
                 onClick={() => {
-                  setIsAddingCustom(false);
+                  setShowCustomTokenInput(false);
                   setCustomTokenAddress('');
                   setCustomTokenError('');
                 }}
-                className="flex-1 px-3 py-1.5 bg-background-tertiary text-foreground rounded-lg hover:bg-border text-sm font-medium transition-colors"
+                disabled={isAddingCustomToken}
+                className="flex-1 px-3 py-1.5 bg-background-tertiary text-foreground rounded-lg hover:bg-border text-sm font-medium transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useAccount, useReadContract, usePublicClient } from 'wagmi';
+import { parseAbiItem } from 'viem';
 import Link from 'next/link';
 import LockCard from './LockCard';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
@@ -24,7 +25,9 @@ const VAULT_ADDRESS = rawVaultAddress.trim().replace(/\s+/g, '').replace(/\n/g, 
 
 export default function ActiveLocks({ onClaimSuccess }: ActiveLocksProps) {
   const { address } = useAccount();
+  const publicClient = usePublicClient();
   const [locks, setLocks] = useState<Lock[]>([]);
+  const [lockIds, setLockIds] = useState<Map<number, bigint>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   
   // Fetch user's locks from contract
@@ -43,6 +46,56 @@ export default function ActiveLocks({ onClaimSuccess }: ActiveLocksProps) {
       setIsLoading(false);
     }
   }, [userLocks, locksLoading]);
+
+  // Fetch lock IDs from events when locks are loaded
+  useEffect(() => {
+    const fetchLockIds = async () => {
+      if (!publicClient || !address || !locks.length) return;
+      
+      try {
+        console.log('[ActiveLocks] Fetching lock IDs for user:', address);
+        
+        // Get LockCreated events for this user
+        const logs = await publicClient.getLogs({
+          address: VAULT_ADDRESS,
+          event: parseAbiItem('event LockCreated(uint256 indexed lockId, address indexed user, address indexed token, uint256 amount, uint256 lockTime, uint256 unlockTime)'),
+          args: {
+            user: address,
+          },
+          fromBlock: 'earliest',
+          toBlock: 'latest',
+        });
+        
+        console.log('[ActiveLocks] Found', logs.length, 'LockCreated events');
+        
+        // Create a mapping of lock index to lock ID
+        const idMap = new Map<number, bigint>();
+        
+        // Sort logs by block number and log index to maintain creation order
+        const sortedLogs = [...logs].sort((a, b) => {
+          if (a.blockNumber !== b.blockNumber) {
+            return Number(a.blockNumber - b.blockNumber);
+          }
+          return Number(a.logIndex - b.logIndex);
+        });
+        
+        // Map each lock to its ID based on the order they were created
+        sortedLogs.forEach((log, index) => {
+          if (log.args && 'lockId' in log.args) {
+            const lockId = log.args.lockId as bigint;
+            idMap.set(index, lockId);
+            console.log(`[ActiveLocks] Lock at index ${index} has ID ${lockId}`);
+          }
+        });
+        
+        setLockIds(idMap);
+      } catch (error) {
+        console.error('[ActiveLocks] Error fetching lock IDs:', error);
+      }
+    };
+    
+    fetchLockIds();
+  }, [publicClient, address, locks]);
 
   const handleRefresh = () => {
     refetch();

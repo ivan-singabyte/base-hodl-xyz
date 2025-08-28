@@ -3,7 +3,7 @@
 import { base, baseSepolia } from 'wagmi/chains';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider, createConfig, http } from 'wagmi';
+import { WagmiProvider, createConfig, http, useChainId } from 'wagmi';
 import { 
   RainbowKitProvider, 
   connectorsForWallets
@@ -51,27 +51,39 @@ const wagmiConfig = createConfig({
   },
 });
 
-export function Providers(props: { children: ReactNode }) {
-  // Clean the API key as well
+// Inner component that can use wagmi hooks
+function OnchainKitProviderWrapper({ children }: { children: ReactNode }) {
+  const chainId = useChainId();
   const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY?.trim() || '';
   
+  // Select the appropriate chain based on current connection
+  const currentChain = chainId === baseSepolia.id ? baseSepolia : base;
+  
+  return (
+    <OnchainKitProvider
+      apiKey={apiKey}
+      chain={currentChain}
+      config={{ 
+        appearance: { 
+          mode: 'auto',
+          theme: 'base'
+        }
+      }}
+    >
+      <RainbowKitProvider modalSize="compact">
+        {children}
+      </RainbowKitProvider>
+    </OnchainKitProvider>
+  );
+}
+
+export function Providers(props: { children: ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={apiKey}
-          chain={base}
-          config={{ 
-            appearance: { 
-              mode: 'auto',
-              theme: 'base'
-            }
-          }}
-        >
-          <RainbowKitProvider modalSize="compact">
-            {props.children}
-          </RainbowKitProvider>
-        </OnchainKitProvider>
+        <OnchainKitProviderWrapper>
+          {props.children}
+        </OnchainKitProviderWrapper>
       </QueryClientProvider>
     </WagmiProvider>
   );

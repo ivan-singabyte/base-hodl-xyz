@@ -10,38 +10,37 @@ import { base, baseSepolia } from 'viem/chains';
 const tokenCache = new Map<string, Token[]>();
 const singleTokenCache = new Map<string, Token>();
 
-// Popular tokens to show by default (symbols)
-const POPULAR_BASE_TOKENS = [
-  'USDC',
-  'WETH', 
-  'DAI',
-  'AERO',
-  'cbETH',
-  'wstETH',
-  'USDS',
-  'USDe',
-  'cbBTC',
-  'WBTC',
-  'rETH',
-  'MORPHO',
-  'VIRTUAL',
-  'EIGEN',
-  'ENA',
-  'PENDLE',
-  'PRIME',
-  'LINK',
-  'COMP',
-  'CRV',
-  'BAL',
-  'SNX',
-  'BRETT',
-  'DEGEN',
+// Popular Base mainnet tokens to show by default
+export const POPULAR_BASE_TOKENS: Token[] = [
+  {
+    address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    chainId: base.id,
+    decimals: 6,
+    name: 'USD Coin',
+    symbol: 'USDC',
+    image: 'https://d3r81g40ycuhqg.cloudfront.net/wallet/wais/44/2b/442b80bd16af0c0d9b22e03a16753823fe826e5bfd457292b55fa0ba8c1ba213-ZWUzYjJmZGUtMDYxNy00NDcyLTg0NjQtMWI4OGEwYjBiODE2',
+  },
+  {
+    address: '0x4200000000000000000000000000000000000006',
+    chainId: base.id,
+    decimals: 18,
+    name: 'Wrapped Ether',
+    symbol: 'WETH',
+    image: 'https://ethereum-optimism.github.io/logos/WETH.svg',
+  },
+  {
+    address: '0x50c5725949a6f0c72e6c4a641f24049a917db0cb',
+    chainId: base.id,
+    decimals: 18,
+    name: 'Dai Stablecoin',
+    symbol: 'DAI',
+    image: 'https://d3r81g40ycuhqg.cloudfront.net/wallet/wais/d0/d7/d0d7784975771dbbac9a22c8c0c12928cc6f658cbcf2bbbf7c909f0fa2426dec-NmU4ZWViMDItOTQyYy00Yjk5LTkzODUtNGJlZmJiMTUxOTgy',
+  },
 ];
 
-// Known Base Sepolia testnet tokens (keep minimal list for testnet)
-export const KNOWN_BASE_SEPOLIA_TOKENS: Record<string, Token> = {
-  // WETH (Wrapped Ether) - Official Base Sepolia WETH
-  '0x4200000000000000000000000000000000000006': {
+// Known Base Sepolia testnet tokens (as array for dropdown)
+export const KNOWN_BASE_SEPOLIA_TOKENS: Token[] = [
+  {
     address: '0x4200000000000000000000000000000000000006',
     chainId: baseSepolia.id,
     decimals: 18,
@@ -49,8 +48,7 @@ export const KNOWN_BASE_SEPOLIA_TOKENS: Record<string, Token> = {
     symbol: 'WETH',
     image: 'https://ethereum-optimism.github.io/logos/WETH.svg',
   },
-  // USDC - Most widely used USDC on Base Sepolia
-  '0x036cbd53842c5426634e7929541ec2318f3dcf7e': {
+  {
     address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     chainId: baseSepolia.id,
     decimals: 6,
@@ -58,8 +56,7 @@ export const KNOWN_BASE_SEPOLIA_TOKENS: Record<string, Token> = {
     symbol: 'USDC',
     image: 'https://ethereum-optimism.github.io/logos/USDC.svg',
   },
-  // EURC
-  '0x808456652fdb597867f38412077a9182bf77359f': {
+  {
     address: '0x808456652fdb597867f38412077A9182bf77359F',
     chainId: baseSepolia.id,
     decimals: 6,
@@ -67,73 +64,75 @@ export const KNOWN_BASE_SEPOLIA_TOKENS: Record<string, Token> = {
     symbol: 'EURC',
     image: null,
   },
+];
+
+// Known Base Sepolia testnet tokens (as map for quick lookup)
+export const KNOWN_BASE_SEPOLIA_TOKENS_MAP: Record<string, Token> = {
+  '0x4200000000000000000000000000000000000006': KNOWN_BASE_SEPOLIA_TOKENS[0],
+  '0x036cbd53842c5426634e7929541ec2318f3dcf7e': KNOWN_BASE_SEPOLIA_TOKENS[1],
+  '0x808456652fdb597867f38412077a9182bf77359f': KNOWN_BASE_SEPOLIA_TOKENS[2],
 };
 
 /**
- * Fetch popular tokens for Base mainnet
+ * Get default tokens based on chain
  */
-export async function fetchPopularTokens(): Promise<Token[]> {
-  const cacheKey = 'popular_base_tokens';
+export function getDefaultTokens(chainId: number): Token[] {
+  if (chainId === baseSepolia.id) {
+    return KNOWN_BASE_SEPOLIA_TOKENS;
+  }
+  return POPULAR_BASE_TOKENS;
+}
+
+/**
+ * Fetch popular tokens for Base mainnet using OnchainKit API
+ */
+export async function fetchPopularTokens(limit: number = 50): Promise<Token[]> {
+  const cacheKey = `popular_base_tokens_${limit}`;
   
   // Check cache first
   if (tokenCache.has(cacheKey)) {
     return tokenCache.get(cacheKey)!;
   }
 
-  const tokens: Token[] = [];
-  const uniqueAddresses = new Set<string>();
-
   try {
-    // Fetch popular tokens in batches
-    for (let i = 0; i < POPULAR_BASE_TOKENS.length; i += 5) {
-      const batch = POPULAR_BASE_TOKENS.slice(i, i + 5);
+    // Fetch tokens from OnchainKit API
+    const result = await getTokens({ 
+      limit: limit.toString()
+    });
+    
+    if (Array.isArray(result) && result.length > 0) {
+      const tokens = result.map(token => ({
+        ...token,
+        chainId: base.id,
+      }));
       
-      await Promise.all(
-        batch.map(async (symbol) => {
-          try {
-            const result = await getTokens({ 
-              limit: '1', 
-              search: symbol 
-            });
-            
-            if (Array.isArray(result) && result.length > 0) {
-              const token = result[0];
-              // Avoid duplicates
-              if (!uniqueAddresses.has(token.address.toLowerCase())) {
-                uniqueAddresses.add(token.address.toLowerCase());
-                tokens.push({
-                  ...token,
-                  chainId: base.id,
-                });
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch token ${symbol}:`, error);
-          }
-        })
-      );
-      
-      // Small delay between batches to avoid rate limiting
-      if (i + 5 < POPULAR_BASE_TOKENS.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      // Cache the results
+      tokenCache.set(cacheKey, tokens);
+      return tokens;
     }
-
-    // Cache the results
-    tokenCache.set(cacheKey, tokens);
-    return tokens;
+    
+    // Fallback to hardcoded popular tokens
+    return POPULAR_BASE_TOKENS;
   } catch (error) {
     console.error('Failed to fetch popular tokens:', error);
-    return [];
+    // Return fallback tokens on error
+    return POPULAR_BASE_TOKENS;
   }
 }
 
 /**
  * Search for tokens by name, symbol, or address
  */
-export async function searchTokens(query: string, limit: number = 10): Promise<Token[]> {
+export async function searchTokens(query: string, limit: number = 20): Promise<Token[]> {
   if (!query || query.length < 2) {
     return [];
+  }
+
+  const cacheKey = `search_${query}_${limit}`;
+  
+  // Check cache first
+  if (tokenCache.has(cacheKey)) {
+    return tokenCache.get(cacheKey)!;
   }
 
   try {
@@ -143,10 +142,16 @@ export async function searchTokens(query: string, limit: number = 10): Promise<T
     });
     
     if (Array.isArray(result) && result.length > 0) {
-      return result.map(token => ({
+      const tokens = result.map(token => ({
         ...token,
         chainId: base.id,
       }));
+      
+      // Cache the results for 5 minutes
+      tokenCache.set(cacheKey, tokens);
+      setTimeout(() => tokenCache.delete(cacheKey), 5 * 60 * 1000);
+      
+      return tokens;
     }
     
     return [];
@@ -159,27 +164,42 @@ export async function searchTokens(query: string, limit: number = 10): Promise<T
 /**
  * Fetch a specific token by address
  */
-export async function fetchTokenByAddress(address: string): Promise<Token | null> {
+export async function fetchTokenByAddress(address: string, chainId: number = base.id): Promise<Token | null> {
   const normalizedAddress = address.toLowerCase();
+  const cacheKey = `${chainId}_${normalizedAddress}`;
   
   // Check single token cache
-  if (singleTokenCache.has(normalizedAddress)) {
-    return singleTokenCache.get(normalizedAddress)!;
+  if (singleTokenCache.has(cacheKey)) {
+    return singleTokenCache.get(cacheKey)!;
+  }
+
+  // For testnet, check hardcoded list first
+  if (chainId === baseSepolia.id) {
+    const testnetToken = KNOWN_BASE_SEPOLIA_TOKENS.find(
+      t => t.address.toLowerCase() === normalizedAddress
+    );
+    if (testnetToken) {
+      singleTokenCache.set(cacheKey, testnetToken);
+      return testnetToken;
+    }
   }
 
   try {
-    const result = await getTokens({ 
-      limit: '1', 
-      search: address 
-    });
-    
-    if (Array.isArray(result) && result.length > 0) {
-      const token = {
-        ...result[0],
-        chainId: base.id,
-      };
-      singleTokenCache.set(normalizedAddress, token);
-      return token;
+    // Try to fetch from API (only works for mainnet)
+    if (chainId === base.id) {
+      const result = await getTokens({ 
+        limit: '1', 
+        search: address 
+      });
+      
+      if (Array.isArray(result) && result.length > 0) {
+        const token = {
+          ...result[0],
+          chainId: chainId,
+        };
+        singleTokenCache.set(cacheKey, token);
+        return token;
+      }
     }
     
     return null;
@@ -190,52 +210,32 @@ export async function fetchTokenByAddress(address: string): Promise<Token | null
 }
 
 /**
- * Fetch multiple tokens by their addresses
+ * Get tokens for dropdown based on chain
  */
-export async function fetchTokensByAddresses(addresses: string[]): Promise<Token[]> {
-  const tokens: Token[] = [];
-  
-  await Promise.all(
-    addresses.map(async (address) => {
-      const token = await fetchTokenByAddress(address);
-      if (token) {
-        tokens.push(token);
-      }
-    })
-  );
-  
-  return tokens;
-}
-
-/**
- * Get all tokens with balances (combines API tokens with user's wallet tokens)
- */
-export async function getTokensWithBalances(
-  walletTokenAddresses: string[],
-  chainId: number
-): Promise<Token[]> {
-  // For Base Sepolia, use the hardcoded list
-  if (chainId === baseSepolia.id) {
-    return Object.values(KNOWN_BASE_SEPOLIA_TOKENS);
-  }
-
-  // For Base mainnet, fetch popular tokens and user's specific tokens
-  const [popularTokens, walletTokens] = await Promise.all([
-    fetchPopularTokens(),
-    fetchTokensByAddresses(walletTokenAddresses)
-  ]);
-
-  // Merge and deduplicate
-  const tokenMap = new Map<string, Token>();
-  
-  [...popularTokens, ...walletTokens].forEach(token => {
-    const key = token.address.toLowerCase();
-    if (!tokenMap.has(key)) {
-      tokenMap.set(key, token);
+export async function getTokensForChain(chainId: number, searchQuery?: string): Promise<Token[]> {
+  // If there's a search query, use search
+  if (searchQuery && searchQuery.length >= 2) {
+    // For testnet, filter hardcoded list
+    if (chainId === baseSepolia.id) {
+      const query = searchQuery.toLowerCase();
+      return KNOWN_BASE_SEPOLIA_TOKENS.filter(
+        token => 
+          token.symbol.toLowerCase().includes(query) ||
+          token.name.toLowerCase().includes(query) ||
+          token.address.toLowerCase().includes(query)
+      );
     }
-  });
-
-  return Array.from(tokenMap.values());
+    // For mainnet, use API search
+    return searchTokens(searchQuery);
+  }
+  
+  // No search query - return default tokens
+  if (chainId === baseSepolia.id) {
+    return KNOWN_BASE_SEPOLIA_TOKENS;
+  }
+  
+  // For mainnet, fetch popular tokens
+  return fetchPopularTokens();
 }
 
 /**
@@ -251,7 +251,7 @@ export function getTokenImageUrl(token: Token | null): string {
   }
   
   // Generate a fallback image based on the symbol
-  return `https://ui-avatars.com/api/?name=${token.symbol}&background=3374FF&color=fff&size=128`;
+  return `https://ui-avatars.com/api/?name=${token.symbol}&background=0052FF&color=fff&size=128`;
 }
 
 /**

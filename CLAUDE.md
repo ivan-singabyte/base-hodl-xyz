@@ -126,3 +126,190 @@ ETHERSCAN_API_KEY=                    # For contract verification
 3. Always run linting before commits: `npm run lint`
 4. Test contract changes: `npx hardhat test`
 5. Deploy to testnet first before mainnet deployment
+
+## Project File Structure
+
+```
+base-hodl-xyz/
+├── app/                        # Next.js application directory
+│   ├── .well-known/           # Well-known URIs for external services
+│   │   └── farcaster.json/    # Farcaster frame configuration
+│   ├── components/            # React components
+│   │   ├── ActiveLocks.tsx    # Display user's active locks
+│   │   ├── AmountInput.tsx    # Token amount input component
+│   │   ├── AnimatedCard.tsx   # Animated card wrapper
+│   │   ├── ClaimFlow.tsx      # Token claiming interface
+│   │   ├── Countdown.tsx      # Lock countdown timer
+│   │   ├── DurationPicker.tsx # Lock duration selector
+│   │   ├── FrameWrapper.tsx   # Farcaster frame wrapper
+│   │   ├── LoadingSpinner.tsx # Loading state indicator
+│   │   ├── LockCard.tsx       # Individual lock display card
+│   │   ├── LockConfirmation.tsx # Lock transaction flow
+│   │   ├── ShareButton.tsx    # Social sharing component
+│   │   ├── Skeleton.tsx       # Loading skeleton component
+│   │   ├── ThemeToggle.tsx    # Dark/light theme switcher
+│   │   ├── TokenSelector.tsx  # ERC-20 token picker
+│   │   └── UserProfile.tsx    # User wallet profile display
+│   ├── contexts/              # React context providers
+│   │   └── AuthContext.tsx    # Authentication state management
+│   ├── dashboard/             # Dashboard route
+│   │   └── page.tsx          # User's locks dashboard page
+│   ├── hooks/                 # Custom React hooks
+│   │   ├── useErrorHandler.tsx # Error handling hook
+│   │   └── useRetry.tsx      # Retry logic hook
+│   ├── lib/                   # Utility libraries
+│   │   ├── env.ts            # Environment variable validation
+│   │   ├── farcaster.ts      # Farcaster integration utilities
+│   │   └── tokenService.ts   # Token data and metadata service
+│   ├── providers/             # Provider configurations
+│   ├── svg/                   # SVG components
+│   │   ├── ArrowSvg.tsx      # Arrow icon component
+│   │   ├── Image.tsx         # Image SVG wrapper
+│   │   └── OnchainKit.tsx    # OnchainKit logo
+│   ├── utils/                 # Utility functions
+│   │   └── formatBalance.ts  # Token balance formatting
+│   ├── globals.css           # Global CSS styles
+│   ├── layout.tsx            # Root layout component
+│   ├── page.tsx              # Main home page (lock creation)
+│   └── providers.tsx         # App-wide providers setup
+├── artifacts/                 # Hardhat compilation artifacts
+│   ├── @openzeppelin/        # OpenZeppelin contract artifacts
+│   ├── build-info/           # Build metadata
+│   └── contracts/            # Project contract artifacts
+│       ├── HodlVault.sol/    # Main vault contract artifacts
+│       └── TestERC20.sol/    # Test token artifacts
+├── cache/                     # Hardhat cache files
+├── contracts/                 # Solidity smart contracts
+│   ├── HodlVault.sol         # Main vault contract
+│   └── TestERC20.sol         # Test ERC-20 token
+├── public/                    # Static assets
+│   ├── .well-known/          # Well-known URIs
+│   ├── android-chrome-*.png  # Android app icons
+│   ├── apple-*.png           # Apple app icons
+│   ├── favicon*.png          # Favicon files
+│   ├── icon-*.png            # Various size app icons
+│   ├── manifest.json         # PWA manifest
+│   └── og-image.png          # Open Graph social image
+├── scripts/                   # Utility and deployment scripts
+│   ├── check-env.js          # Environment variable checker
+│   ├── check-wallet.js       # Wallet balance checker
+│   ├── deploy-local.js       # Local deployment script
+│   ├── deploy.js             # Mainnet/testnet deployment
+│   ├── generate-icons.js     # Icon generation script
+│   ├── test-lock.js          # Lock testing script
+│   ├── test-share-urls.js    # Social sharing test
+│   ├── validate-embeds.js    # Embed validation
+│   ├── validate-manifest.js  # Manifest validation
+│   └── verify.js             # Contract verification script
+├── test/                      # Test files
+│   └── HodlVault.test.js     # Contract unit tests
+├── .env.example              # Example environment variables
+├── .eslintrc.json            # ESLint configuration
+├── .gitignore                # Git ignore patterns
+├── CLAUDE.md                 # This file - Claude Code guidance
+├── CONTRIBUTING.md           # Contribution guidelines
+├── hardhat.config.js         # Hardhat configuration
+├── LICENSE                   # MIT license
+├── next.config.mjs           # Next.js configuration
+├── package.json              # Node.js dependencies
+├── postcss.config.mjs        # PostCSS configuration
+├── README.md                 # Project documentation
+├── tailwind.config.ts        # Tailwind CSS configuration
+├── tsconfig.json             # TypeScript configuration
+└── vercel.json               # Vercel deployment config
+```
+
+## Directory Documentation
+
+### `/app` - Next.js Application
+The main application directory following Next.js 15 App Router structure. Contains all frontend code, components, and routing logic.
+
+#### `/app/components`
+Reusable React components for the UI. Each component is self-contained with its own props interface and handles specific functionality:
+- **Lock Management**: ActiveLocks, LockCard, LockConfirmation, ClaimFlow
+- **Input Components**: AmountInput, DurationPicker, TokenSelector
+- **UI Elements**: AnimatedCard, LoadingSpinner, Skeleton, ThemeToggle
+- **Social Features**: ShareButton, FrameWrapper, UserProfile
+
+#### `/app/lib`
+Core business logic and service layers:
+- `tokenService.ts`: Manages token metadata, balances, and allowances
+- `farcaster.ts`: Handles Farcaster frame generation and sharing
+- `env.ts`: Runtime environment variable validation
+
+#### `/app/hooks`
+Custom React hooks for common functionality:
+- `useErrorHandler`: Centralized error handling with user notifications
+- `useRetry`: Retry logic for failed operations
+
+#### `/app/contexts`
+React Context providers for global state management:
+- `AuthContext`: Manages wallet connection and authentication state
+
+### `/contracts` - Smart Contracts
+Solidity smart contracts for the protocol:
+- `HodlVault.sol`: Core vault contract with lock/claim functionality
+- `TestERC20.sol`: Mock ERC-20 token for testing
+
+### `/scripts` - Automation Scripts
+Node.js scripts for development and deployment:
+- **Deployment**: `deploy.js`, `deploy-local.js`, `verify.js`
+- **Testing**: `test-lock.js`, `test-share-urls.js`, `check-wallet.js`
+- **Validation**: `validate-embeds.js`, `validate-manifest.js`, `check-env.js`
+- **Utilities**: `generate-icons.js`
+
+### `/test` - Test Suite
+Comprehensive test coverage:
+- `HodlVault.test.js`: Smart contract unit tests using Hardhat/Chai
+
+### `/public` - Static Assets
+Public files served by Next.js:
+- App icons for various platforms (iOS, Android, PWA)
+- Social media preview images (Open Graph)
+- PWA manifest configuration
+
+### `/artifacts` - Build Outputs
+Generated by Hardhat compilation:
+- Contract ABIs and bytecode
+- OpenZeppelin dependency artifacts
+- Build metadata and cache
+
+## Key Files
+
+### Configuration Files
+- `hardhat.config.js`: Smart contract development environment
+- `next.config.mjs`: Next.js framework configuration
+- `tailwind.config.ts`: Tailwind CSS design system
+- `tsconfig.json`: TypeScript compiler options
+- `vercel.json`: Deployment configuration
+
+### Documentation
+- `README.md`: User-facing project documentation
+- `CONTRIBUTING.md`: Developer contribution guide
+- `LICENSE`: MIT license terms
+
+## Development Best Practices
+
+### Component Organization
+- One component per file with clear, descriptive names
+- Props interfaces defined with TypeScript
+- Hooks and utilities extracted to separate files
+- Consistent file naming (PascalCase for components)
+
+### State Management
+- Local state for component-specific data
+- Context for cross-component state
+- Wagmi hooks for blockchain state
+- No external state management libraries
+
+### Code Style
+- TypeScript for type safety
+- Tailwind CSS for styling
+- Framer Motion for animations
+- ESLint for code quality
+
+### Testing Strategy
+- Smart contract tests cover all functions
+- Manual testing scripts for integration
+- Environment validation before deployment
+- Social sharing verification tools

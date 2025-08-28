@@ -8,7 +8,7 @@ import { type Token, TokenImage } from '@coinbase/onchainkit/token';
 import Countdown from './Countdown';
 import ShareButton from './ShareButton';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
-import { KNOWN_BASE_SEPOLIA_TOKENS, fetchTokenByAddress } from '@/app/lib/tokenService';
+import { KNOWN_BASE_SEPOLIA_TOKENS_MAP, fetchTokenByAddress } from '@/app/lib/tokenService';
 
 interface Lock {
   token: `0x${string}`;
@@ -48,7 +48,7 @@ export default function LockCard({ lock, lockIndex, onClaimSuccess }: LockCardPr
     const getTokenInfo = async () => {
       // For Base Sepolia, check the known tokens list
       if (chainId === baseSepolia.id) {
-        const knownToken = KNOWN_BASE_SEPOLIA_TOKENS[lock.token.toLowerCase()];
+        const knownToken = KNOWN_BASE_SEPOLIA_TOKENS_MAP[lock.token.toLowerCase()];
         if (knownToken) {
           setTokenInfo(knownToken);
           return;

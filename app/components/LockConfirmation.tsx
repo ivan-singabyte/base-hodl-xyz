@@ -66,16 +66,16 @@ export default function LockConfirmation({
 
   const unlockDate = addSeconds(new Date(), Number(duration));
 
-  const handleApprove = () => {
+  const handleApprove = useCallback(() => {
     if (!address) {
       console.error('No wallet address connected');
-      handleError(new Error('Please connect your wallet'), handleApprove);
+      handleError(new Error('Please connect your wallet'), async () => handleApprove());
       return;
     }
     
-    if (!VAULT_ADDRESS || VAULT_ADDRESS === '' || !VAULT_ADDRESS.startsWith('0x')) {
+    if (!VAULT_ADDRESS || !VAULT_ADDRESS.startsWith('0x')) {
       console.error('Invalid or missing VAULT_ADDRESS:', VAULT_ADDRESS);
-      handleError(new Error('Vault address not configured. Please check environment variables.'), handleApprove);
+      handleError(new Error('Vault address not configured. Please check environment variables.'), async () => handleApprove());
       return;
     }
     
@@ -106,7 +106,7 @@ export default function LockConfirmation({
       functionName: 'approve',
       args: [VAULT_ADDRESS, amountWei],
     });
-  };
+  }, [address, token.address, amountWei, approve, clearError, handleError]);
 
   const handleLock = useCallback(() => {
     if (!address) {
@@ -114,7 +114,7 @@ export default function LockConfirmation({
       return;
     }
     
-    if (!VAULT_ADDRESS || VAULT_ADDRESS === '' || !VAULT_ADDRESS.startsWith('0x')) {
+    if (!VAULT_ADDRESS || !VAULT_ADDRESS.startsWith('0x')) {
       console.error('Invalid or missing VAULT_ADDRESS:', VAULT_ADDRESS);
       return;
     }
@@ -148,7 +148,7 @@ export default function LockConfirmation({
   useEffect(() => {
     if (isApproveError && approveError) {
       console.error('Approval transaction error:', approveError);
-      handleError(approveError, handleApprove);
+      handleError(approveError, async () => handleApprove());
       setIsApproving(false);
     }
   }, [isApproveError, approveError, handleError]);
@@ -157,7 +157,7 @@ export default function LockConfirmation({
   useEffect(() => {
     if (isLockError && lockError) {
       console.error('Lock transaction error:', lockError);
-      handleError(lockError, () => {
+      handleError(lockError, async () => {
         setHasTriggeredLock(false);
         handleLock();
       });
@@ -293,7 +293,7 @@ export default function LockConfirmation({
           onCancel={clearError}
         />
 
-        {(!VAULT_ADDRESS || VAULT_ADDRESS === '') && (
+        {!VAULT_ADDRESS && (
           <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
             <p className="text-sm text-red-700">
               ❌ <strong>Error:</strong> Vault contract address is not configured. 
@@ -323,7 +323,7 @@ export default function LockConfirmation({
           {!approveHash ? (
             <button
               onClick={handleApprove}
-              disabled={isApproving || !VAULT_ADDRESS || VAULT_ADDRESS === ''}
+              disabled={isApproving || !VAULT_ADDRESS}
               className="flex-1 touch-target py-3 px-4 bg-base-blue text-white rounded-lg
                        hover:bg-base-blue-dark transition-all transform hover:scale-[1.02] active:scale-[0.98]
                        disabled:opacity-50 disabled:cursor-not-allowed focus-ring"

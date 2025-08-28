@@ -163,3 +163,4 @@ Deploy your own instance with one click:
 ---
 
 Built with ❤️ using [OnchainKit](https://onchainkit.xyz) and [Next.js](https://nextjs.org)
+<!-- Staging deployment test Thu Aug 28 16:05:42 +08 2025 -->

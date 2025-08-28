@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Token, TokenSelectDropdown } from '@coinbase/onchainkit/token';
-import { useAccount, useBalance, useChainId } from 'wagmi';
-import { formatUnits, isAddress } from 'viem';
+import { useAccount, useBalance, useChainId, useReadContracts } from 'wagmi';
+import { formatUnits, isAddress, erc20Abi } from 'viem';
 import { 
   getDefaultTokens,
   getTokensForChain,
@@ -21,6 +21,7 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
   const { address } = useAccount();
   const chainId = useChainId();
   
+  const [allTokens, setAllTokens] = useState<Token[]>([]);
   const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [customTokenAddress, setCustomTokenAddress] = useState('');
@@ -46,11 +47,23 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
       
       try {
         const tokens = await getTokensForChain(chainId);
-        setAvailableTokens(tokens);
+        // Filter out native ETH if it appears in the list (address is 0x0)
+        const filteredTokens = tokens.filter(token => 
+          token.address && 
+          token.address !== '0x0000000000000000000000000000000000000000' &&
+          token.symbol !== 'ETH'
+        );
+        setAllTokens(filteredTokens);
       } catch (error) {
         console.error('Failed to load tokens:', error);
         // Use fallback tokens
-        setAvailableTokens(getDefaultTokens(chainId));
+        const fallbackTokens = getDefaultTokens(chainId);
+        const filteredFallback = fallbackTokens.filter(token => 
+          token.address && 
+          token.address !== '0x0000000000000000000000000000000000000000' &&
+          token.symbol !== 'ETH'
+        );
+        setAllTokens(filteredFallback);
       } finally {
         setIsLoadingTokens(false);
       }
@@ -59,9 +72,66 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
     loadTokensAsync();
   }, [chainId]);
 
+  // Prepare balance check contracts
+  const balanceContracts = useMemo(() => {
+    if (!address || !allTokens.length) return [];
+    
+    return allTokens.map(token => ({
+      address: token.address as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [address],
+    }));
+  }, [address, allTokens]);
+
+  // Fetch all token balances in parallel
+  const { data: balanceData, isLoading: isLoadingBalances } = useReadContracts({
+    contracts: balanceContracts,
+    query: {
+      enabled: !!address && balanceContracts.length > 0,
+    },
+  });
+
+  // Filter tokens based on balance > 0
+  useEffect(() => {
+    if (!address) {
+      // If wallet not connected, show a limited set of popular tokens
+      setAvailableTokens(allTokens.slice(0, 5));
+      return;
+    }
+
+    if (!balanceData || isLoadingBalances) {
+      setAvailableTokens([]);
+      return;
+    }
+
+    // Filter tokens that have balance > 0
+    const tokensWithBalance = allTokens.filter((token, index) => {
+      const balanceResult = balanceData[index];
+      if (balanceResult?.status === 'success' && balanceResult.result) {
+        const balance = balanceResult.result as bigint;
+        return balance > BigInt(0);
+      }
+      return false;
+    });
+
+    // If no tokens with balance, show WETH as a default option to guide users
+    if (tokensWithBalance.length === 0) {
+      const wethToken = allTokens.find(t => t.symbol === 'WETH');
+      if (wethToken) {
+        setAvailableTokens([wethToken]);
+      } else {
+        setAvailableTokens([]);
+      }
+    } else {
+      setAvailableTokens(tokensWithBalance);
+    }
+  }, [address, allTokens, balanceData, isLoadingBalances]);
+
   // Clear cache when network changes
   useEffect(() => {
     clearTokenCache();
+    setAllTokens([]);
     setAvailableTokens([]);
   }, [chainId]);
 
@@ -76,6 +146,11 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
       return;
     }
 
+    if (!address) {
+      setCustomTokenError('Please connect your wallet first');
+      return;
+    }
+
     setCustomTokenError('');
     setIsAddingCustom(true);
     
@@ -84,6 +159,10 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
       const token = await fetchTokenByAddress(customTokenAddress, chainId);
       
       if (token) {
+        // Add to available tokens list if not already there
+        if (!availableTokens.find(t => t.address.toLowerCase() === token.address.toLowerCase())) {
+          setAvailableTokens(prev => [...prev, token]);
+        }
         handleTokenSelect(token);
         setCustomTokenAddress('');
         setCustomTokenError('');
@@ -92,12 +171,14 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
         const minimalToken: Token = {
           address: customTokenAddress as `0x${string}`,
           chainId: chainId,
-          name: 'Unknown Token',
-          symbol: 'UNKNOWN',
+          name: 'Custom Token',
+          symbol: 'CUSTOM',
           decimals: 18,
           image: null,
         };
         
+        // Add to available tokens list
+        setAvailableTokens(prev => [...prev, minimalToken]);
         handleTokenSelect(minimalToken);
         setCustomTokenAddress('');
         setCustomTokenError('');
@@ -118,9 +199,18 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
       
       {/* OnchainKit TokenSelectDropdown */}
       <div className="token-selector-wrapper">
-        {isLoadingTokens ? (
+        {isLoadingTokens || isLoadingBalances ? (
           <div className="w-full px-4 py-3 bg-background-secondary border border-border rounded-lg text-center text-foreground-tertiary">
-            Loading tokens...
+            {isLoadingTokens ? 'Loading tokens...' : 'Checking balances...'}
+          </div>
+        ) : availableTokens.length === 0 && address ? (
+          <div className="w-full px-4 py-3 bg-background-secondary border border-border rounded-lg text-center">
+            <p className="text-foreground-secondary text-sm">
+              No tokens with balance found.
+            </p>
+            <p className="text-foreground-tertiary text-xs mt-1">
+              Get WETH by wrapping ETH or acquire other tokens first.
+            </p>
           </div>
         ) : (
           <TokenSelectDropdown
@@ -196,7 +286,13 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
 
       {mounted && !address && (
         <div className="text-sm text-foreground-tertiary text-center p-3 bg-background-secondary rounded-lg border border-border">
-          Connect your wallet to see available tokens
+          Connect your wallet to see tokens with balance
+        </div>
+      )}
+
+      {mounted && address && availableTokens.length > 0 && (
+        <div className="text-xs text-foreground-tertiary text-center">
+          Showing only ERC-20 tokens with balance &gt; 0
         </div>
       )}
 

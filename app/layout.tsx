@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     'onchainkit:chain': '8453', // Base mainnet chain ID
     'onchainkit:app-store': 'true',
     'onchainkit:app-id': 'hodl-vault',
-    'onchainkit:app-category': 'defi'
+    'onchainkit:app-category': 'defi',
     
     // Additional app discovery metadata
     'application-name': 'HODL Vault',

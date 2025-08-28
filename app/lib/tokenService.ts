@@ -11,15 +11,8 @@ const tokenCache = new Map<string, Token[]>();
 const singleTokenCache = new Map<string, Token>();
 
 // Popular Base mainnet tokens to show by default
+// WETH is listed first as it's a common wrapped token for ERC-20 operations
 export const POPULAR_BASE_TOKENS: Token[] = [
-  {
-    address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    chainId: base.id,
-    decimals: 6,
-    name: 'USD Coin',
-    symbol: 'USDC',
-    image: 'https://d3r81g40ycuhqg.cloudfront.net/wallet/wais/44/2b/442b80bd16af0c0d9b22e03a16753823fe826e5bfd457292b55fa0ba8c1ba213-ZWUzYjJmZGUtMDYxNy00NDcyLTg0NjQtMWI4OGEwYjBiODE2',
-  },
   {
     address: '0x4200000000000000000000000000000000000006',
     chainId: base.id,
@@ -27,6 +20,14 @@ export const POPULAR_BASE_TOKENS: Token[] = [
     name: 'Wrapped Ether',
     symbol: 'WETH',
     image: 'https://ethereum-optimism.github.io/logos/WETH.svg',
+  },
+  {
+    address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    chainId: base.id,
+    decimals: 6,
+    name: 'USD Coin',
+    symbol: 'USDC',
+    image: 'https://d3r81g40ycuhqg.cloudfront.net/wallet/wais/44/2b/442b80bd16af0c0d9b22e03a16753823fe826e5bfd457292b55fa0ba8c1ba213-ZWUzYjJmZGUtMDYxNy00NDcyLTg0NjQtMWI4OGEwYjBiODE2',
   },
   {
     address: '0x50c5725949a6f0c72e6c4a641f24049a917db0cb',

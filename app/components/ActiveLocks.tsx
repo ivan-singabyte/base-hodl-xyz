@@ -18,7 +18,9 @@ interface ActiveLocksProps {
   onClaimSuccess?: () => void;
 }
 
-const VAULT_ADDRESS = process.env.NEXT_PUBLIC_VAULT_ADDRESS as `0x${string}`;
+// Clean the vault address - remove any whitespace or newlines
+const rawVaultAddress = process.env.NEXT_PUBLIC_VAULT_ADDRESS || '';
+const VAULT_ADDRESS = rawVaultAddress.trim().replace(/\s+/g, '').replace(/\n/g, '') as `0x${string}`;
 
 export default function ActiveLocks({ onClaimSuccess }: ActiveLocksProps) {
   const { address } = useAccount();

@@ -18,12 +18,14 @@ interface LockConfirmationProps {
   onCancel: () => void;
 }
 
-const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS || '') as `0x${string}`;
+// Clean the vault address - remove any whitespace or newlines
+const rawVaultAddress = process.env.NEXT_PUBLIC_VAULT_ADDRESS || '';
+const VAULT_ADDRESS = rawVaultAddress.trim().replace(/\s+/g, '').replace(/\n/g, '') as `0x${string}`;
 
 // Log the vault address for debugging
 if (typeof window !== 'undefined') {
   console.log('VAULT_ADDRESS from env:', process.env.NEXT_PUBLIC_VAULT_ADDRESS);
-  console.log('Parsed VAULT_ADDRESS:', VAULT_ADDRESS);
+  console.log('Cleaned VAULT_ADDRESS:', VAULT_ADDRESS);
 }
 
 export default function LockConfirmation({

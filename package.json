@@ -4,10 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:staging": "NODE_ENV=staging next dev",
     "build": "next build",
+    "build:staging": "NODE_ENV=staging next build",
     "start": "next start",
+    "start:staging": "NODE_ENV=staging next start",
     "lint": "next lint",
-    "validate:manifest": "node scripts/validate-manifest.js"
+    "validate:manifest": "node scripts/validate-manifest.js",
+    "setup:staging": "node scripts/setup-staging-vercel.js",
+    "deploy:staging": "node scripts/deploy-staging.js",
+    "test:staging": "NODE_ENV=staging node scripts/test-staging.js"
   },
   "dependencies": {
     "@coinbase/onchainkit": "latest",

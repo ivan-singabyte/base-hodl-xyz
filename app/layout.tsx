@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 import { AuthProvider } from './contexts/AuthContext';
+import EnvironmentBadge from './components/EnvironmentBadge';
 
 export const metadata: Metadata = {
   title: 'HODL Vault - Lock Your Tokens with Diamond Hands',
@@ -122,6 +123,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="antialiased">
+        <EnvironmentBadge />
         <Providers>
           <AuthProvider>
             {children}

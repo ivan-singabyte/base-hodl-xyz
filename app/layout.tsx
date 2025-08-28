@@ -60,9 +60,12 @@ export const metadata: Metadata = {
     'base:app:chain': 'base',
     'base:app:type': 'web',
     
-    // OnchainKit specific metadata
+    // OnchainKit App Store metadata
     'onchainkit:version': '1.0.0',
     'onchainkit:chain': '8453', // Base mainnet chain ID
+    'onchainkit:app-store': 'true',
+    'onchainkit:app-id': 'hodl-vault',
+    'onchainkit:app-category': 'defi'
     
     // Additional app discovery metadata
     'application-name': 'HODL Vault',

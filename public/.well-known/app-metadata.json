@@ -1,0 +1,49 @@
+{
+  "name": "HODL Vault",
+  "description": "Time-lock any ERC-20 token on Base. Prove your diamond hands with secure vaults. No early withdrawals, 100% free.",
+  "icon": "https://base-hodl.xyz/icon-512.png",
+  "url": "https://base-hodl.xyz",
+  "category": "defi",
+  "subcategory": "vaults",
+  "developer": {
+    "name": "HODL Vault Team",
+    "website": "https://base-hodl.xyz",
+    "contact": "support@base-hodl.xyz"
+  },
+  "blockchain": {
+    "chain": "base",
+    "chainId": 8453,
+    "contracts": [
+      {
+        "name": "HodlVault",
+        "address": "YOUR_CONTRACT_ADDRESS",
+        "type": "vault"
+      }
+    ]
+  },
+  "features": [
+    "Token Locking",
+    "Time Vaults", 
+    "No Early Withdrawal",
+    "Free to Use",
+    "Social Sharing",
+    "Farcaster Integration"
+  ],
+  "wallets": ["coinbase", "metamask", "rainbow", "walletconnect"],
+  "screenshots": [
+    "https://base-hodl.xyz/screenshot-home.png",
+    "https://base-hodl.xyz/screenshot-dashboard.png"
+  ],
+  "social": {
+    "twitter": "https://twitter.com/hodlvault",
+    "farcaster": "https://warpcast.com/hodlvault",
+    "github": "https://github.com/ivan-singabyte/base-hodl-xyz"
+  },
+  "compliance": {
+    "audit": false,
+    "openSource": true,
+    "license": "MIT"
+  },
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-28"
+}

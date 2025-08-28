@@ -172,17 +172,26 @@ export default function ActiveLocks({ onClaimSuccess }: ActiveLocksProps) {
 
       {/* Locks Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {activeLocks.map((lock, index) => (
-          <LockCard
-            key={index}
-            lock={lock}
-            lockIndex={index}
-            onClaimSuccess={() => {
-              handleRefresh();
-              onClaimSuccess?.();
-            }}
-          />
-        ))}
+        {activeLocks.map((lock, index) => {
+          // Find the actual lock ID for this lock
+          // We need to find the index in the full (unfiltered) locks array
+          const fullIndex = locks.findIndex(l => l === lock);
+          const actualLockId = lockIds.get(fullIndex);
+          
+          console.log(`[ActiveLocks] Rendering lock at fullIndex ${fullIndex} with ID ${actualLockId}`);
+          
+          return (
+            <LockCard
+              key={index}
+              lock={lock}
+              lockIndex={actualLockId !== undefined ? Number(actualLockId) : fullIndex}
+              onClaimSuccess={() => {
+                handleRefresh();
+                onClaimSuccess?.();
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Refresh Button */}

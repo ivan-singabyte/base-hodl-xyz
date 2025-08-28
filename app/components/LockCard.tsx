@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { formatUnits, parseAbi } from 'viem';
-import { useWriteContract, useWaitForTransactionReceipt, useChainId, useReadContracts, usePublicClient } from 'wagmi';
+import { formatUnits } from 'viem';
+import { useWriteContract, useWaitForTransactionReceipt, useChainId, usePublicClient } from 'wagmi';
 import { type Token, TokenImage } from '@coinbase/onchainkit/token';
 import { erc20Abi } from 'viem';
 import Countdown from './Countdown';
@@ -14,13 +14,6 @@ import {
   POPULAR_BASE_TOKENS 
 } from '@/app/lib/tokenService';
 import { baseSepolia, base } from 'viem/chains';
-
-// ERC-20 ABI for token metadata
-const ERC20_ABI = parseAbi([
-  'function name() view returns (string)',
-  'function symbol() view returns (string)',
-  'function decimals() view returns (uint8)',
-]);
 
 interface Lock {
   token: `0x${string}`;

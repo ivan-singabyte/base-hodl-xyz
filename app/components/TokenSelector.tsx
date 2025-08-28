@@ -145,6 +145,8 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
   };
 
   const handleCustomTokenAdd = async () => {
+    console.log('[TokenSelector] Starting custom token add:', customTokenAddress);
+    
     if (!isAddress(customTokenAddress)) {
       setCustomTokenError('Invalid token address');
       return;
@@ -155,69 +157,119 @@ export default function TokenSelector({ onTokenSelect, selectedToken }: TokenSel
       return;
     }
 
-    if (!publicClient) {
-      setCustomTokenError('Web3 client not available');
-      return;
-    }
-
     setCustomTokenError('');
     setIsAddingCustomToken(true);
     
     try {
+      const tokenAddress = customTokenAddress as `0x${string}`;
+      console.log('[TokenSelector] Attempting to fetch token:', tokenAddress, 'on chain:', chainId);
+      
       // First try to fetch from API/cache
       let token = await fetchTokenByAddress(customTokenAddress, chainId);
+      console.log('[TokenSelector] API fetch result:', token);
       
-      // If not found via API, fetch directly from blockchain
+      // If not found via API, create a minimal token without blockchain reads
+      // This is more reliable on mobile/Coinbase app
       if (!token) {
-        try {
-          // Fetch token metadata directly from the contract
-          const tokenAddress = customTokenAddress as `0x${string}`;
+        console.log('[TokenSelector] Token not found in API, creating minimal token');
+        
+        // For mobile compatibility, create a simple token object
+        // without trying to read from blockchain which can hang
+        token = {
+          address: tokenAddress,
+          chainId: chainId,
+          name: 'Custom Token',
+          symbol: 'TOKEN',
+          decimals: 18,
+          image: null,
+        };
+        
+        // Optionally try to fetch metadata, but don't block on it
+        if (publicClient) {
+          console.log('[TokenSelector] Attempting to enrich token data from blockchain');
           
-          const [name, symbol, decimals] = await Promise.all([
-            publicClient.readContract({
-              address: tokenAddress,
-              abi: erc20Abi,
-              functionName: 'name',
-            }).catch(() => 'Unknown Token'),
-            publicClient.readContract({
-              address: tokenAddress,
-              abi: erc20Abi,
-              functionName: 'symbol',
-            }).catch(() => 'UNKNOWN'),
-            publicClient.readContract({
-              address: tokenAddress,
-              abi: erc20Abi,
-              functionName: 'decimals',
-            }).catch(() => 18),
-          ]);
-
-          token = {
-            address: tokenAddress,
-            chainId: chainId,
-            name: name as string,
-            symbol: symbol as string,
-            decimals: decimals as number,
-            image: null,
-          };
-        } catch (contractError) {
-          console.error('Failed to fetch token metadata from contract:', contractError);
-          setCustomTokenError('Invalid ERC-20 token contract');
-          setIsAddingCustomToken(false);
-          return;
+          try {
+            // Try to get symbol first (most important)
+            const symbol = await Promise.race([
+              publicClient.readContract({
+                address: tokenAddress,
+                abi: erc20Abi,
+                functionName: 'symbol',
+              }) as Promise<string>,
+              new Promise<string>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+              )
+            ]).catch((err: unknown) => {
+              console.warn('[TokenSelector] Failed to fetch symbol:', err);
+              return 'TOKEN';
+            });
+            
+            if (symbol && typeof symbol === 'string') {
+              token.symbol = symbol;
+              console.log('[TokenSelector] Updated symbol:', symbol);
+            }
+            
+            // Try to get decimals
+            const decimals = await Promise.race([
+              publicClient.readContract({
+                address: tokenAddress,
+                abi: erc20Abi,
+                functionName: 'decimals',
+              }) as Promise<number>,
+              new Promise<number>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+              )
+            ]).catch((err: unknown) => {
+              console.warn('[TokenSelector] Failed to fetch decimals:', err);
+              return 18;
+            });
+            
+            if (decimals && typeof decimals === 'number') {
+              token.decimals = decimals;
+              console.log('[TokenSelector] Updated decimals:', decimals);
+            }
+            
+            // Try to get name (least important)
+            const name = await Promise.race([
+              publicClient.readContract({
+                address: tokenAddress,
+                abi: erc20Abi,
+                functionName: 'name',
+              }) as Promise<string>,
+              new Promise<string>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+              )
+            ]).catch((err: unknown) => {
+              console.warn('[TokenSelector] Failed to fetch name:', err);
+              return token?.symbol || 'Custom Token';
+            });
+            
+            if (name && typeof name === 'string') {
+              token.name = name;
+              console.log('[TokenSelector] Updated name:', name);
+            }
+          } catch (enrichError) {
+            console.warn('[TokenSelector] Failed to enrich token data:', enrichError);
+            // Continue with minimal token data
+          }
         }
       }
+      
+      console.log('[TokenSelector] Final token object:', token);
       
       // Add to available tokens list if not already there
       if (!availableTokens.find(t => t.address.toLowerCase() === token!.address.toLowerCase())) {
         setAvailableTokens(prev => [...prev, token!]);
+        console.log('[TokenSelector] Added token to available list');
       }
       
       handleTokenSelect(token);
       setCustomTokenAddress('');
       setCustomTokenError('');
+      console.log('[TokenSelector] Token selection complete');
     } catch (error) {
-      console.error('Error adding custom token:', error);
-      setCustomTokenError('Failed to add token');
+      console.error('[TokenSelector] Error adding custom token:', error);
+      setCustomTokenError('Failed to add token. Please try again.');
     } finally {
       setIsAddingCustomToken(false);
     }

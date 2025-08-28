@@ -1,21 +1,11 @@
-import { FrameRequest, getFrameMessage } from '@coinbase/onchainkit/frame';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const body: FrameRequest = await req.json();
+    const body = await req.json();
     
-    // Verify the frame message
-    const { isValid, message } = await getFrameMessage(body, {
-      neynarApiKey: process.env.NEYNAR_API_KEY
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid frame request' }, { status: 400 });
-    }
-
-    // Extract button index to determine action
-    const buttonIndex = message?.button || 0;
+    // Extract button index from the Farcaster frame request
+    const buttonIndex = body?.untrustedData?.buttonIndex || 0;
     const appUrl = process.env.NEXT_PUBLIC_URL || 'https://base-hodl.xyz';
     
     // Handle different button actions

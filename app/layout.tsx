@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: 'HODL Vault - Lock Your Tokens with Diamond Hands',
   description: 'Lock any ERC-20 token with fixed durations on Base. No early withdrawal, completely free.',
   metadataBase: new URL('https://base-hodl.xyz'),
+  keywords: ['hodl', 'lock', 'vault', 'time-lock', 'diamond hands', 'erc20', 'tokens', 'defi', 'base', 'cryptocurrency', 'web3'],
+  authors: [{ name: 'HODL Vault Team' }],
+  creator: 'HODL Vault',
+  publisher: 'HODL Vault',
+  category: 'defi',
   openGraph: {
     title: 'HODL Vault - Diamond Hands Token Locker',
     description: 'Lock your tokens with diamond hands. No early withdrawal, completely free on Base.',
@@ -30,32 +35,41 @@ export const metadata: Metadata = {
     description: 'Lock your tokens with diamond hands on Base',
     images: ['/og-image.png'],
     creator: '@base',
+    site: '@base',
   },
   other: {
-    'fc:frame': JSON.stringify({
-      version: 'next',
-      imageUrl: 'https://base-hodl.xyz/og-image.png',
-      button: {
-        title: 'Launch HODL Vault',
-        action: {
-          type: 'launch_frame',
-          name: 'HODL Vault',
-          url: 'https://base-hodl.xyz',
-          splashImageUrl: 'https://base-hodl.xyz/og-image.png',
-          splashBackgroundColor: '#0A0B0D',
-        },
-      },
-    }),
-    'fc:frame:button:1': 'Lock Tokens',
+    // Farcaster Frame metadata (required for Farcaster discovery)
+    'fc:frame': 'vNext',
+    'fc:frame:image': 'https://base-hodl.xyz/og-image.png',
+    'fc:frame:image:aspect_ratio': '1.91:1',
+    'fc:frame:button:1': 'Lock Tokens 🔒',
     'fc:frame:button:1:action': 'link',
     'fc:frame:button:1:target': 'https://base-hodl.xyz',
-    'fc:frame:button:2': 'View My Locks',
+    'fc:frame:button:2': 'View Dashboard 📊',
     'fc:frame:button:2:action': 'link',
     'fc:frame:button:2:target': 'https://base-hodl.xyz/dashboard',
-    'fc:frame:button:3': 'Learn More',
+    'fc:frame:button:3': 'How It Works ❓',
     'fc:frame:button:3:action': 'link',
     'fc:frame:button:3:target': 'https://base-hodl.xyz/#how-it-works',
-    'fc:frame:image:aspect_ratio': '1.91:1',
+    
+    // Base Mini App metadata (for Base ecosystem discovery)
+    'base:app': 'hodl-vault',
+    'base:app:name': 'HODL Vault',
+    'base:app:description': 'Time-lock ERC-20 tokens with diamond hands on Base',
+    'base:app:category': 'defi',
+    'base:app:chain': 'base',
+    'base:app:type': 'web',
+    
+    // OnchainKit specific metadata
+    'onchainkit:version': '1.0.0',
+    'onchainkit:chain': '8453', // Base mainnet chain ID
+    
+    // Additional app discovery metadata
+    'application-name': 'HODL Vault',
+    'apple-mobile-web-app-title': 'HODL Vault',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'mobile-web-app-capable': 'yes',
   },
   icons: {
     icon: [

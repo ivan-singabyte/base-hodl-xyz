@@ -12,6 +12,27 @@
   "scope": "/",
   "lang": "en",
   "categories": ["finance", "cryptocurrency", "defi"],
+  "protocol_handlers": [
+    {
+      "protocol": "web+hodl",
+      "url": "/?lock=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "base_app": {
+    "chain_id": 8453,
+    "network": "base",
+    "app_type": "defi",
+    "features": ["token-locking", "time-vaults", "social-sharing"]
+  },
   "icons": [
     {
       "src": "/favicon-16x16.png",

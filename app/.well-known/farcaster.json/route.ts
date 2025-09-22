@@ -2,45 +2,57 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   const appUrl = process.env.NEXT_PUBLIC_URL || 'https://base-hodl.xyz';
-  
-  const config = {
-    // Account association for Farcaster app verification
-    accountAssociation: {
-      header: 'eyJmaWQiOjE2MjIsInR5cGUiOiJhcHAiLCJrZXkiOiIweDAwIn0=',
-      signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-      signer: '0x0000000000000000000000000000000000000000'
-    },
-    
-    // Frame configuration for Farcaster mini-app
+  const projectName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'HODL Vault';
+
+  // This is the MiniKit manifest format for Farcaster frames
+  const manifest = {
+    version: '1.0.0',
+    name: projectName,
+    description: 'Time-lock any ERC-20 token on Base. Prove your diamond hands with no early withdrawal.',
+    homeUrl: appUrl,
+    iconUrl: `${appUrl}/icon-512.png`,
+    splashImageUrl: process.env.NEXT_PUBLIC_SPLASH_IMAGE || `${appUrl}/og-image.png`,
+    splashBackgroundColor: process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR || '#0A0B0D',
+    webhookUrl: `${appUrl}/api/webhook`,
+
+    // Frame configuration
     frame: {
-      version: 'vNext',
-      name: 'HODL Vault',
-      iconUrl: `${appUrl}/icon-512.png`,
-      splashImageUrl: `${appUrl}/og-image.png`,
-      splashBackgroundColor: '#0A0B0D',
-      homeUrl: appUrl,
-      webhookUrl: `${appUrl}/api/webhook`
+      version: 'next',
+      name: projectName,
+      imageUrl: process.env.NEXT_PUBLIC_APP_HERO_IMAGE || `${appUrl}/og-image.png`,
+      button: {
+        title: `Launch ${projectName}`,
+        action: {
+          type: 'launch_frame',
+          name: projectName,
+          url: appUrl,
+          splashImageUrl: process.env.NEXT_PUBLIC_SPLASH_IMAGE || `${appUrl}/og-image.png`,
+          splashBackgroundColor: process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR || '#0A0B0D',
+        },
+      },
     },
-    
-    // Mini-app metadata for discovery
-    miniApp: {
-      name: 'HODL Vault',
-      description: 'Time-lock any ERC-20 token on Base. Prove your diamond hands.',
-      category: 'defi',
-      chainId: 8453, // Base mainnet
-      features: ['token-locking', 'time-vaults', 'erc20-support'],
-      supportedWallets: ['coinbase', 'metamask', 'rainbow', 'walletconnect'],
-      primaryColor: '#0052FF',
-      icon: {
-        small: `${appUrl}/icon-72.png`,
-        medium: `${appUrl}/icon-192.png`,
-        large: `${appUrl}/icon-512.png`
-      }
+
+    // Categories and tags for discovery
+    primaryCategory: 'defi',
+    tags: ['token-locking', 'time-vaults', 'erc20', 'base', 'hodl', 'diamond-hands'],
+
+    // App screenshots for store listing
+    screenshotUrls: [
+      `${appUrl}/og-image.png`
+    ],
+
+    // Account association (needs to be generated via Base Build tool)
+    // These are placeholder values - you'll need to generate real ones
+    accountAssociation: {
+      header: 'eyJmaWQiOjEsInR5cGUiOiJhcHAiLCJrZXkiOiIweDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAifQ==',
+      payload: 'eyJkb21haW4iOiJiYXNlLWhvZGwueHl6IiwidGltZXN0YW1wIjoxNzAwMDAwMDAwLCJleHBpcmVzQXQiOjE5MDAwMDAwMDB9',
+      signature: '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
     }
   };
 
-  return NextResponse.json(config, {
+  return NextResponse.json(manifest, {
     headers: {
+      'Content-Type': 'application/json',
       'Cache-Control': 'public, max-age=3600',
       'Access-Control-Allow-Origin': '*'
     }

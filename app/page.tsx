@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { Token } from '@coinbase/onchainkit/token';
+import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
 import TokenSelector from './components/TokenSelector';
 import DurationPicker from './components/DurationPicker';
 import AmountInput from './components/AmountInput';
@@ -27,8 +28,10 @@ const LockConfirmation = dynamic(() => import('./components/LockConfirmation'), 
 export default function App() {
   const { isConnected, address } = useAccount();
   const { requireAuth } = useAuth();
+  const { setFrameReady, isFrameReady, context } = useMiniKit();
   const [mounted, setMounted] = useState(false);
-  
+  const [frameAdded, setFrameAdded] = useState(false);
+
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<bigint | null>(null);
   const [amount, setAmount] = useState<string>('');
@@ -36,9 +39,17 @@ export default function App() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [lockSuccess, setLockSuccess] = useState(false);
 
+  const addFrame = useAddFrame();
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
 
   const { data: tokenBalance } = useBalance({
     address: address,
@@ -64,6 +75,34 @@ export default function App() {
       setShowConfirmation(true);
     }
   };
+
+  const handleAddFrame = useCallback(async () => {
+    const frameAdded = await addFrame();
+    setFrameAdded(Boolean(frameAdded));
+  }, [addFrame]);
+
+  const saveFrameButton = useMemo(() => {
+    if (context && !context.client.added) {
+      return (
+        <button
+          onClick={handleAddFrame}
+          className="text-base-blue hover:text-base-blue/80 px-4 py-2 rounded-lg border border-base-blue/20 hover:border-base-blue/40 transition-colors text-sm font-medium"
+        >
+          Save Frame
+        </button>
+      );
+    }
+
+    if (frameAdded) {
+      return (
+        <div className="flex items-center space-x-1 text-sm font-medium text-green-600">
+          <span>✓ Saved</span>
+        </div>
+      );
+    }
+
+    return null;
+  }, [context, frameAdded, handleAddFrame]);
 
   const handleLockSuccess = () => {
     // Close modal immediately
@@ -96,7 +135,10 @@ export default function App() {
                 HODL Vault
               </h1>
             </div>
-            {mounted && isConnected && <UserProfile />}
+            <div className="flex items-center space-x-4">
+              {saveFrameButton}
+              {mounted && isConnected && <UserProfile />}
+            </div>
           </div>
         </div>
       </header>

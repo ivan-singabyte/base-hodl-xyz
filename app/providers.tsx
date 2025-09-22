@@ -1,11 +1,11 @@
 'use client';
 
 import { base, baseSepolia } from 'wagmi/chains';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { MiniKitProvider } from '@coinbase/onchainkit/minikit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http, useChainId } from 'wagmi';
-import { 
-  RainbowKitProvider, 
+import {
+  RainbowKitProvider,
   connectorsForWallets
 } from '@rainbow-me/rainbowkit';
 import {
@@ -58,31 +58,36 @@ const wagmiConfig = createConfig({
 });
 
 // Inner component that can use wagmi hooks
-function OnchainKitProviderWrapper({ children }: { children: ReactNode }) {
+function MiniKitProviderWrapper({ children }: { children: ReactNode }) {
   const chainId = useChainId();
   const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY?.trim() || '';
-  
+
   // In staging, force Sepolia. In production, use the connected chain or default to mainnet
   const currentChain = isStaging ? baseSepolia : (chainId === baseSepolia.id ? baseSepolia : base);
-  
+  const rpcUrl = currentChain.id === base.id ? 'https://mainnet.base.org' : 'https://sepolia.base.org';
+
   return (
-    <OnchainKitProvider
+    <MiniKitProvider
       apiKey={apiKey}
       chain={currentChain}
-      config={{ 
-        appearance: { 
+      config={{
+        appearance: {
           mode: 'auto',
-          theme: 'base'
+          theme: 'mini-app-theme',
+          name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'HODL Vault',
+          logo: process.env.NEXT_PUBLIC_APP_HERO_IMAGE
         }
       }}
+      rpcUrl={rpcUrl}
+      autoConnect
     >
-      <RainbowKitProvider 
+      <RainbowKitProvider
         modalSize="compact"
         initialChain={defaultChain}
       >
         {children}
       </RainbowKitProvider>
-    </OnchainKitProvider>
+    </MiniKitProvider>
   );
 }
 
@@ -90,9 +95,9 @@ export function Providers(props: { children: ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProviderWrapper>
+        <MiniKitProviderWrapper>
           {props.children}
-        </OnchainKitProviderWrapper>
+        </MiniKitProviderWrapper>
       </QueryClientProvider>
     </WagmiProvider>
   );

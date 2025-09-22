@@ -5,98 +5,105 @@ import { Providers } from './providers';
 import { AuthProvider } from './contexts/AuthContext';
 import EnvironmentBadge from './components/EnvironmentBadge';
 
-export const metadata: Metadata = {
-  title: 'HODL Vault - Lock Your Tokens with Diamond Hands',
-  description: 'Lock any ERC-20 token with fixed durations on Base. No early withdrawal, completely free.',
-  metadataBase: new URL('https://base-hodl.xyz'),
-  keywords: ['hodl', 'lock', 'vault', 'time-lock', 'diamond hands', 'erc20', 'tokens', 'defi', 'base', 'cryptocurrency', 'web3'],
-  authors: [{ name: 'HODL Vault Team' }],
-  creator: 'HODL Vault',
-  publisher: 'HODL Vault',
-  category: 'defi',
-  openGraph: {
-    title: 'HODL Vault - Diamond Hands Token Locker',
-    description: 'Lock your tokens with diamond hands. No early withdrawal, completely free on Base.',
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://base-hodl.xyz',
-    siteName: 'HODL Vault',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'HODL Vault - Lock Your Tokens',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'HODL Vault - Diamond Hands Token Locker',
-    description: 'Lock your tokens with diamond hands on Base',
-    images: ['/og-image.png'],
-    creator: '@base',
-    site: '@base',
-  },
-  other: {
-    // Farcaster Frame metadata (required for Farcaster discovery)
-    'fc:frame': 'vNext',
-    'fc:frame:image': 'https://base-hodl.xyz/og-image.png',
-    'fc:frame:image:aspect_ratio': '1.91:1',
-    'fc:frame:button:1': 'Lock Tokens 🔒',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': 'https://base-hodl.xyz',
-    'fc:frame:button:2': 'View Dashboard 📊',
-    'fc:frame:button:2:action': 'link',
-    'fc:frame:button:2:target': 'https://base-hodl.xyz/dashboard',
-    'fc:frame:button:3': 'How It Works ❓',
-    'fc:frame:button:3:action': 'link',
-    'fc:frame:button:3:target': 'https://base-hodl.xyz/#how-it-works',
-    
-    // Base Mini App metadata (for Base ecosystem discovery)
-    'base:app': 'hodl-vault',
-    'base:app:name': 'HODL Vault',
-    'base:app:description': 'Time-lock ERC-20 tokens with diamond hands on Base',
-    'base:app:category': 'defi',
-    'base:app:chain': 'base',
-    'base:app:type': 'web',
-    
-    // OnchainKit App Store metadata
-    'onchainkit:version': '1.0.0',
-    'onchainkit:chain': '8453', // Base mainnet chain ID
-    'onchainkit:app-store': 'true',
-    'onchainkit:app-id': 'hodl-vault',
-    'onchainkit:app-category': 'defi',
-    
-    // Additional app discovery metadata
-    'application-name': 'HODL Vault',
-    'apple-mobile-web-app-title': 'HODL Vault',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'default',
-    'mobile-web-app-capable': 'yes',
-  },
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180' },
-    ],
-    other: [
-      { rel: 'mask-icon', url: '/favicon.ico' },
-    ],
-  },
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'HODL Vault',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const appUrl = process.env.NEXT_PUBLIC_URL || 'https://base-hodl.xyz';
+  const projectName = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || 'HODL Vault';
+
+  return {
+    title: `${projectName} - Lock Your Tokens with Diamond Hands`,
+    description: 'Lock any ERC-20 token with fixed durations on Base. No early withdrawal, completely free.',
+    metadataBase: new URL(appUrl),
+    keywords: ['hodl', 'lock', 'vault', 'time-lock', 'diamond hands', 'erc20', 'tokens', 'defi', 'base', 'cryptocurrency', 'web3'],
+    authors: [{ name: 'HODL Vault Team' }],
+    creator: 'HODL Vault',
+    publisher: 'HODL Vault',
+    category: 'defi',
+    openGraph: {
+      title: `${projectName} - Diamond Hands Token Locker`,
+      description: 'Lock your tokens with diamond hands. No early withdrawal, completely free on Base.',
+      type: 'website',
+      locale: 'en_US',
+      url: appUrl,
+      siteName: projectName,
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: `${projectName} - Lock Your Tokens`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${projectName} - Diamond Hands Token Locker`,
+      description: 'Lock your tokens with diamond hands on Base',
+      images: ['/og-image.png'],
+      creator: '@base',
+      site: '@base',
+    },
+    other: {
+      // Farcaster Frame metadata - properly formatted for MiniKit
+      'fc:frame': JSON.stringify({
+        version: 'next',
+        imageUrl: process.env.NEXT_PUBLIC_APP_HERO_IMAGE || `${appUrl}/og-image.png`,
+        button: {
+          title: `Launch ${projectName}`,
+          action: {
+            type: 'launch_frame',
+            name: projectName,
+            url: appUrl,
+            splashImageUrl: process.env.NEXT_PUBLIC_SPLASH_IMAGE || `${appUrl}/og-image.png`,
+            splashBackgroundColor: process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR || '#0A0B0D',
+          },
+        },
+      }),
+
+      // Base Mini App metadata (for Base ecosystem discovery)
+      'base:app': 'hodl-vault',
+      'base:app:name': projectName,
+      'base:app:description': 'Time-lock ERC-20 tokens with diamond hands on Base',
+      'base:app:category': 'defi',
+      'base:app:chain': 'base',
+      'base:app:type': 'web',
+
+      // OnchainKit App Store metadata
+      'onchainkit:version': '1.0.0',
+      'onchainkit:chain': '8453', // Base mainnet chain ID
+      'onchainkit:app-store': 'true',
+      'onchainkit:app-id': 'hodl-vault',
+      'onchainkit:app-category': 'defi',
+
+      // Additional app discovery metadata
+      'application-name': projectName,
+      'apple-mobile-web-app-title': projectName,
+      'apple-mobile-web-app-capable': 'yes',
+      'apple-mobile-web-app-status-bar-style': 'default',
+      'mobile-web-app-capable': 'yes',
+    },
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: 'any' },
+        { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+        { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      ],
+      apple: [
+        { url: '/apple-touch-icon.png', sizes: '180x180' },
+      ],
+      other: [
+        { rel: 'mask-icon', url: '/favicon.ico' },
+      ],
+    },
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: projectName,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',

@@ -28,7 +28,7 @@ const LockConfirmation = dynamic(() => import('./components/LockConfirmation'), 
 export default function App() {
   const { isConnected, address } = useAccount();
   const { requireAuth } = useAuth();
-  const { setFrameReady, context } = useMiniKit();
+  const { setFrameReady, isFrameReady, context } = useMiniKit();
   const [mounted, setMounted] = useState(false);
   const [frameAdded, setFrameAdded] = useState(false);
 
@@ -46,9 +46,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Set frame ready immediately when component mounts
-    setFrameReady();
-  }, [setFrameReady]);
+    // Set frame ready if not already set
+    if (!isFrameReady && setFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
 
   const { data: tokenBalance } = useBalance({
     address: address,

@@ -52,23 +52,43 @@ export default function Dashboard() {
   useEffect(() => {
     setMounted(true);
 
-    // Call Farcaster SDK ready() when component mounts
+    // Try multiple approaches to ensure SDK ready is called
+
+    // Approach 1: Direct synchronous call (most compatible)
+    try {
+      if (sdk && sdk.actions && sdk.actions.ready) {
+        sdk.actions.ready();
+        console.log('Dashboard: Farcaster SDK ready() called directly');
+      }
+    } catch (directError) {
+      console.error('Dashboard: Direct SDK ready() failed:', directError);
+    }
+
+    // Approach 2: Async call with context check
     const initializeFrame = async () => {
       try {
-        await sdk.actions.ready();
-        console.log('Farcaster SDK ready() called successfully on dashboard');
+        // Check if we're in Farcaster context
+        if (typeof window !== 'undefined' && sdk?.context) {
+          await sdk.actions.ready();
+          console.log('Dashboard: Farcaster SDK ready() called with context');
+        } else if (sdk?.actions?.ready) {
+          // Try without context check
+          await sdk.actions.ready();
+          console.log('Dashboard: Farcaster SDK ready() called without context check');
+        } else {
+          console.log('Dashboard: SDK not available, using OnchainKit fallback');
+          // Still call OnchainKit's setFrameReady for compatibility
+          if (setFrameReady) {
+            setFrameReady();
+          }
+        }
       } catch (error) {
-        console.error('Error calling sdk.actions.ready():', error);
-      }
-
-      // Also call OnchainKit's setFrameReady for compatibility
-      if (!isFrameReady && setFrameReady) {
-        setFrameReady();
+        console.error('Dashboard: Async sdk.actions.ready() failed:', error);
       }
     };
 
     initializeFrame();
-  }, [setFrameReady, isFrameReady]);
+  }, []); // Empty dependency array - run once on mount
 
 
   const handleClaimSuccess = () => {

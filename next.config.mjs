@@ -13,6 +13,17 @@ const nextConfig = {
   // Compression
   compress: true,
   
+  // Redirects for Farcaster hosted manifest
+  async redirects() {
+    return [
+      {
+        source: '/.well-known/farcaster.json',
+        destination: 'https://api.farcaster.xyz/miniapps/hosted-manifest/019971c4-fa91-5ee9-a5cb-89943ba1a9f8',
+        permanent: false, // 307 temporary redirect
+      },
+    ];
+  },
+
   // PWA headers
   async headers() {
     return [

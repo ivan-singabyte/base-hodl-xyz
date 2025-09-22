@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { sdk } from '@farcaster/miniapp-sdk';
+// Remove Farcaster SDK - use OnchainKit instead like pokpok app
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
@@ -51,44 +51,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
 
-    // Try multiple approaches to ensure SDK ready is called
-
-    // Approach 1: Direct synchronous call (most compatible)
-    try {
-      if (sdk && sdk.actions && sdk.actions.ready) {
-        sdk.actions.ready();
-        console.log('Dashboard: Farcaster SDK ready() called directly');
-      }
-    } catch (directError) {
-      console.error('Dashboard: Direct SDK ready() failed:', directError);
+  // Use OnchainKit's setFrameReady (like pokpok app) instead of Farcaster SDK
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
     }
-
-    // Approach 2: Async call with context check
-    const initializeFrame = async () => {
-      try {
-        // Check if we're in Farcaster context
-        if (typeof window !== 'undefined' && sdk?.context) {
-          await sdk.actions.ready();
-          console.log('Dashboard: Farcaster SDK ready() called with context');
-        } else if (sdk?.actions?.ready) {
-          // Try without context check
-          await sdk.actions.ready();
-          console.log('Dashboard: Farcaster SDK ready() called without context check');
-        } else {
-          console.log('Dashboard: SDK not available, using OnchainKit fallback');
-          // Still call OnchainKit's setFrameReady for compatibility
-          if (setFrameReady) {
-            setFrameReady();
-          }
-        }
-      } catch (error) {
-        console.error('Dashboard: Async sdk.actions.ready() failed:', error);
-      }
-    };
-
-    initializeFrame();
-  }, []); // Empty dependency array - run once on mount
+  }, [setFrameReady, isFrameReady]);
 
 
   const handleClaimSuccess = () => {

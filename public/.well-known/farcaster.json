@@ -7,7 +7,7 @@
     "splashImageUrl": "https://www.base-hodl.xyz/og-image.png",
     "splashBackgroundColor": "#0A0B0D",
     "subtitle": "Lock tokens with diamond hands",
-    "description": "Time-lock any ERC-20 token on Base with fixed durations. No early withdrawal, 100% free.",
+    "description": "Timelock any ERC20 token on Base with fixed durations. No early withdrawal and completely free.",
     "primaryCategory": "finance",
     "tags": ["defi", "vault", "hodl", "lock", "base"],
     "heroImageUrl": "https://www.base-hodl.xyz/og-image.png",

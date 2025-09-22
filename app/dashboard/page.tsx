@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
+import { sdk } from '@farcaster/miniapp-sdk';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
@@ -50,10 +51,23 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
-    // Set frame ready for MiniKit if not already set
-    if (!isFrameReady && setFrameReady) {
-      setFrameReady();
-    }
+
+    // Call Farcaster SDK ready() when component mounts
+    const initializeFrame = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster SDK ready() called successfully on dashboard');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+
+      // Also call OnchainKit's setFrameReady for compatibility
+      if (!isFrameReady && setFrameReady) {
+        setFrameReady();
+      }
+    };
+
+    initializeFrame();
   }, [setFrameReady, isFrameReady]);
 
 

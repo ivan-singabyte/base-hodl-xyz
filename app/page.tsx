@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { Token } from '@coinbase/onchainkit/token';
 import { useAddFrame, useMiniKit } from '@coinbase/onchainkit/minikit';
+import { sdk } from '@farcaster/miniapp-sdk';
 import TokenSelector from './components/TokenSelector';
 import DurationPicker from './components/DurationPicker';
 import AmountInput from './components/AmountInput';
@@ -46,10 +47,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Set frame ready if not already set
-    if (!isFrameReady && setFrameReady) {
-      setFrameReady();
-    }
+    // Call Farcaster SDK ready() when component mounts
+    const initializeFrame = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster SDK ready() called successfully');
+      } catch (error) {
+        console.error('Error calling sdk.actions.ready():', error);
+      }
+
+      // Also call OnchainKit's setFrameReady for compatibility
+      if (!isFrameReady && setFrameReady) {
+        setFrameReady();
+      }
+    };
+
+    initializeFrame();
   }, [setFrameReady, isFrameReady]);
 
   const { data: tokenBalance } = useBalance({

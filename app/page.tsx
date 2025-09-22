@@ -46,10 +46,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
-  }, [setFrameReady, isFrameReady]);
+    // Set frame ready immediately when component mounts
+    setFrameReady();
+  }, [setFrameReady]);
 
   const { data: tokenBalance } = useBalance({
     address: address,

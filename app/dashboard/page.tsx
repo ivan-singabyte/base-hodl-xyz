@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import HodlVaultABI from '../../artifacts/contracts/HodlVault.sol/HodlVault.json';
@@ -28,6 +29,7 @@ const VAULT_ADDRESS = rawVaultAddress.trim().replace(/\s+/g, '').replace(/\n/g, 
 export default function Dashboard() {
   const { isConnected, address } = useAccount();
   const { requireAuth } = useAuth();
+  const { setFrameReady } = useMiniKit();
   const [mounted, setMounted] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -48,7 +50,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Set frame ready for MiniKit
+    setFrameReady();
+  }, [setFrameReady]);
 
 
   const handleClaimSuccess = () => {

@@ -17,7 +17,7 @@ export async function GET() {
       payload: "eyJkb21haW4iOiJ3d3cuYmFzZS1ob2RsLnh5eiJ9",
       signature: "Wklk0KhLSQLnEbuf2RbHh35RzDvI52No1LpaYPgjJ5d7tg01cNxt+FGXu6hMHQQoG9dRFqWFRUPZ8Nx3KP5AdBs="
     },
-    miniapp: withValidProperties({
+    frame: withValidProperties({
       version: "1",
       name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME || "HODL Vault",
       subtitle: "Lock tokens with diamond hands",
@@ -26,6 +26,7 @@ export async function GET() {
       splashImageUrl: `${URL}/og-image.png`,
       splashBackgroundColor: "#0A0B0D",
       homeUrl: URL,
+      webhookUrl: `${URL}/api/webhook`,
       primaryCategory: "finance",
       tags: ["defi", "vault", "hodl", "lock", "base"],
       heroImageUrl: `${URL}/og-image.png`,

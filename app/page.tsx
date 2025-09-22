@@ -28,7 +28,7 @@ const LockConfirmation = dynamic(() => import('./components/LockConfirmation'), 
 export default function App() {
   const { isConnected, address } = useAccount();
   const { requireAuth } = useAuth();
-  const { setFrameReady, isFrameReady, context } = useMiniKit();
+  const { setFrameReady, context } = useMiniKit();
   const [mounted, setMounted] = useState(false);
   const [frameAdded, setFrameAdded] = useState(false);
 
